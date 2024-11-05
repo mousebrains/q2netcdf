@@ -112,15 +112,17 @@ def loadQData(f, fn:str, hdr:dict) -> xr.Dataset:
 
     stime = (hdr["time"] + np.timedelta64(int(items[2] * 1000), "ms")).astype("datetime64[ns]")
     etime = (hdr["time"] + np.timedelta64(int(items[3] * 1000), "ms")).astype("datetime64[ns]")
-  
+ 
     ds = xr.Dataset(
             coords=dict(
-                time=[etime],
+                time=[stime + (etime - stime) / 2],
                 channelIdent=np.array(hdr["channelIdent"]).astype("uint16"),
                 spectraIdent=np.array(hdr["spectraIdent"]).astype("uint16"),
                 frequency=np.array(hdr["frequencyBins"]).astype("f4"),
                 ),
             data_vars=dict(
+                stime=("time", [stime]),
+                etime=("time", [etime]),
                 error=("time", np.array([items[1]]).astype("uint16")),
                 channel=(("time", "channelIdent"), 
                          np.reshape(np.array(items[4:(Nc+4)]).astype("f4"), (1,Nc))),
@@ -335,8 +337,17 @@ def addEncoding(ds:xr.Dataset, level:int=5) -> xr.Dataset:
     if level <= 0: return ds
 
     for name in ds:
+        if ds[name].dtype == "object": continue
         ds[name].encoding = {'compression': 'zlib', 'compression_level': level}
 
+    return ds
+
+def addFileIndex(ds:xr.Dataset) -> xr.Dataset:
+    t0 = ds.stime.data.min()
+    ds = ds.assign_coords(ftime = [t0])
+    for name in ds:
+        if ds[name].dims: continue # Not a scalar
+        ds = ds.assign({name: ("ftime", [ds[name].data])})
     return ds
 
 parser = ArgumentParser()
@@ -357,11 +368,12 @@ for fn in args.qfile:
 if len(frames) == 1:
     ds = frames[0]
 else:
-    ds = xr.concat(frames)
+    for index in range(len(frames)):
+        frames[index] = addFileIndex(frames[index])
+    ds = xr.merge(frames)
 
 ds = splitIdenties(ds)
 ds = cfCompliant(ds)
 ds = addEncoding(ds, args.compressionLevel)
-print(ds)
 
 ds.to_netcdf(args.nc)
