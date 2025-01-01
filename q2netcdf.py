@@ -89,7 +89,7 @@ def loadQHeader(f, fn:str) -> dict:
         return None
     (hdr["recordSize"], ) = struct.unpack("<H", buffer)
 
-    logging.info("hdr %s", hdr)
+    logging.info("hdr %s", hdr["time"])
     return hdr
 
 def loadQData(f, fn:str, hdr:dict) -> xr.Dataset:
@@ -147,7 +147,6 @@ def loadQfile(fn:str) -> xr.Dataset:
             (ident,) = struct.unpack("<H", buffer)
             match ident:
                 case 0x1729: # Header+Config record
-                    logging.info(f"HDR at {n:#05x}")
                     hdr = loadQHeader(f, fn)
                     if hdr is None: break
                 case 0x1657: # Data record
@@ -375,5 +374,4 @@ else:
 ds = splitIdenties(ds)
 ds = cfCompliant(ds)
 ds = addEncoding(ds, args.compressionLevel)
-
 ds.to_netcdf(args.nc)
