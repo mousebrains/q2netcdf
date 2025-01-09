@@ -146,7 +146,7 @@ def writePartialFile(ifn:str, ofp, szHeader:int, szData:int, nRecords:int, indic
 
 def decimateFiles(qfiles:dict, ofn:str, totSize:int, maxSize:int) -> int:
     try:
-        filenames = sorted(qfiles) # sorted filenames to work on
+        filenames = sorted(qfiles, reverse=False) # sorted filenames to work on
         info = {}
         totHdrSize = 0
         totDataSize = 0
@@ -245,7 +245,7 @@ def scanDirectory(args:ArgumentParser, times:np.array) -> int:
     if totSize <= args.maxSize:
         # Glue the files together since their total size is small enough
         # This handles the no-files case and will generate an empty .mri file
-        glueFiles(sorted(qfiles), args.output, args.bufferSize)
+        glueFiles(sorted(qfiles, reverse=False), args.output, args.bufferSize)
         return totSize
 
     # Parse the qfiles and pull out roughly equally spaced in time records
