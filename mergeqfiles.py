@@ -144,7 +144,7 @@ def writePartialFile(ifn:str, ofp, szHeader:int, szData:int, nRecords:int, indic
             ofp.write(buffer)
 
 
-def decimateFiles(qfiles:dict, ofn:str, totSize:int, maxSize:int):
+def decimateFiles(qfiles:dict, ofn:str, totSize:int, maxSize:int) -> int:
     try:
         filenames = sorted(qfiles) # sorted filenames to work on
         info = {}
@@ -174,7 +174,8 @@ def decimateFiles(qfiles:dict, ofn:str, totSize:int, maxSize:int):
         with open(ofn, "wb") as ofp:
             if ratio <= 0:
                 logging.warning("Creating an empty file since ratio, %s, <=0", ratio)
-                return
+                st = os.fstat(ofp.fileno())
+                return st.st_size
 
             for ifn in filenames:
                 item = info[ifn]
@@ -189,6 +190,8 @@ def decimateFiles(qfiles:dict, ofn:str, totSize:int, maxSize:int):
                                  item["dataSize"],
                                  item["nRecords"],
                                  indices)
+            st = os.fstat(ofp.fileno())
+            return st.st_size
     except:
         logging.exception("Unable to decimate %s to %s", filenames, ofn)
 
@@ -208,7 +211,7 @@ def glueFiles(filenames:list, ofn:str, bufferSize:int=1024*1024):
     except:
         logging.exception("Unable to glue %s to %s", filenames, ofn)
 
-def scanDirectory(args:ArgumentParser, times:np.array):
+def scanDirectory(args:ArgumentParser, times:np.array) -> int:
     with os.scandir(args.datadir) as it:
         qfiles = {}
         totSize = 0
@@ -242,23 +245,23 @@ def scanDirectory(args:ArgumentParser, times:np.array):
     if totSize <= args.maxSize:
         # Glue the files together since their total size is small enough
         # This handles the no-files case and will generate an empty .mri file
-        glueFiles(sorted(qfiles), args.mri, args.bufferSize)
-    else:
-        # Parse the qfiles and pull out roughly equally spaced in time records
-        decimateFiles(qfiles, args.mri, totSize, args.maxSize)
+        glueFiles(sorted(qfiles), args.output, args.bufferSize)
+        return totSize
+
+    # Parse the qfiles and pull out roughly equally spaced in time records
+    outSize = decimateFiles(qfiles, args.output, totSize, args.maxSize)
+    return outSize
 
 parser = ArgumentParser()
 parser.add_argument("stime", type=float, help="Unix seconds for earliest sample, or 0 for now")
 parser.add_argument("dt", type=float, help="Seconds added to stime for other end of samples")
 parser.add_argument("maxSize", type=int, help="Maximum output filesize in bytes")
-parser.add_argument("mri", type=str, help="Output filename")
+parser.add_argument("--output", "-o", type=str, default="/dev/stdout", help="Output filename")
 parser.add_argument("--bufferSize", type=int, default=100*1024,
                     help="Maximum buffer size to read at a time in bytes")
 parser.add_argument("--datadir", type=str, default="~/data", help="Where Q-files are stored")
 parser.add_argument("--verbose", "-v", action="store_true", help="Enable logging.debug messages")
-parser.add_argument("--logfile", "-o", type=str, help="Output of logfile messages")
-# parser.add_argument("--config", type=str, default="~/data/mergeqfiles.config",
-                    # help="YAML config file")
+parser.add_argument("--logfile", type=str, help="Output of logfile messages")
 args = parser.parse_args()
 
 args.datadir = os.path.abspath(os.path.expanduser(args.datadir))
@@ -293,6 +296,7 @@ try:
 
     logging.info("Time limits %s", times.astype("datetime64[s]"))
 
-    scanDirectory(args, times)
+    outSize = scanDirectory(args, times)
+    print(outSize)
 except:
     logging.exception("Unexpected exception executing %s", args)
