@@ -231,10 +231,10 @@ def scanDirectory(args:ArgumentParser, times:np.array) -> int:
                 logging.debug("Ignoring %s due to times out of range, %s>%s %s or %s<%s %s",
                               entry.name,
                               np.datetime64(round(st.st_ctime*1e9), "ns"),
-                              np.datetime64(round(times[1] * 1e9), "ns"),
+                              times[1].astype("datetime64[ns]"),
                               st.st_ctime > times[1],
                               np.datetime64(round(st.st_mtime*1e9), "ns"),
-                              np.datetime64(round(times[0]*1e9), "ns"),
+                              times[0].astype("datetime64[ns]"),
                               st.st_mtime < times[0],
                               )
                 continue
