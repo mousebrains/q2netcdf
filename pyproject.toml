@@ -1,0 +1,19 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "q2netcdf"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "netcdf4>=1.7.2",
+    "numpy>=2.2.1",
+    "xarray>=2025.1.1",
+]
+
+[project.scripts]
+q2netcdf = "q2netcdf.q2netcdf:main"
+mergeqfiles = "q2netcdf.mergeqfiles:main"
