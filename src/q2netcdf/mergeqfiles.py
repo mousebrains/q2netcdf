@@ -252,51 +252,57 @@ def scanDirectory(args:ArgumentParser, times:np.array) -> int:
     outSize = decimateFiles(qfiles, args.output, totSize, args.maxSize)
     return outSize
 
-parser = ArgumentParser()
-parser.add_argument("stime", type=float, help="Unix seconds for earliest sample, or 0 for now")
-parser.add_argument("dt", type=float, help="Seconds added to stime for other end of samples")
-parser.add_argument("maxSize", type=int, help="Maximum output filesize in bytes")
-parser.add_argument("--output", "-o", type=str, default="/dev/stdout", help="Output filename")
-parser.add_argument("--bufferSize", type=int, default=100*1024,
-                    help="Maximum buffer size to read at a time in bytes")
-parser.add_argument("--datadir", type=str, default="~/data", help="Where Q-files are stored")
-parser.add_argument("--verbose", "-v", action="store_true", help="Enable logging.debug messages")
-parser.add_argument("--logfile", type=str, help="Output of logfile messages")
-args = parser.parse_args()
 
-args.datadir = os.path.abspath(os.path.expanduser(args.datadir))
+def main():
+    parser = ArgumentParser()
+    parser.add_argument("stime", type=float, help="Unix seconds for earliest sample, or 0 for now")
+    parser.add_argument("dt", type=float, help="Seconds added to stime for other end of samples")
+    parser.add_argument("maxSize", type=int, help="Maximum output filesize in bytes")
+    parser.add_argument("--output", "-o", type=str, default="/dev/stdout", help="Output filename")
+    parser.add_argument("--bufferSize", type=int, default=100*1024,
+                        help="Maximum buffer size to read at a time in bytes")
+    parser.add_argument("--datadir", type=str, default="~/data", help="Where Q-files are stored")
+    parser.add_argument("--verbose", "-v", action="store_true", help="Enable logging.debug messages")
+    parser.add_argument("--logfile", type=str, help="Output of logfile messages")
+    args = parser.parse_args()
 
-if not os.path.isdir(args.datadir):
-    print(f"ERROR: Data directory '{args.datadir}' does not exist")
-    sys.exit(1)
+    args.datadir = os.path.abspath(os.path.expanduser(args.datadir))
 
-try:
-    if args.logfile is None:
-        args.logfile = os.path.join(args.datadir, "mergeqfiles.log")
-    elif args.logfile == "":
-        args.logfile = None # Spew out to the console
-    else:
-        args.logfile = os.path.abspath(os.path.expanduser(args.logfile))
-        dirname = os.path.dirname(args.logfile)
-        if not os.path.isdir(dirname):
-            os.makedirs(dirname, 0o755, exist_ok=True)
+    if not os.path.isdir(args.datadir):
+        print(f"ERROR: Data directory '{args.datadir}' does not exist")
+        sys.exit(1)
 
-    logging.basicConfig(
-            format="%(asctime)s %(levelname)s: %(message)s",
-            level=logging.DEBUG if args.verbose else logging.INFO,
-            filename=args.logfile,
-            )
+    try:
+        if args.logfile is None:
+            args.logfile = os.path.join(args.datadir, "mergeqfiles.log")
+        elif args.logfile == "":
+            args.logfile = None # Spew out to the console
+        else:
+            args.logfile = os.path.abspath(os.path.expanduser(args.logfile))
+            dirname = os.path.dirname(args.logfile)
+            if not os.path.isdir(dirname):
+                os.makedirs(dirname, 0o755, exist_ok=True)
 
-    logging.info("Args: %s", args)
+        logging.basicConfig(
+                format="%(asctime)s %(levelname)s: %(message)s",
+                level=logging.DEBUG if args.verbose else logging.INFO,
+                filename=args.logfile,
+                )
 
-    if args.stime <= 0:
-        args.stime = time.time() # Current time
+        logging.info("Args: %s", args)
 
-    times = np.sort([args.stime, args.stime + args.dt])
+        if args.stime <= 0:
+            args.stime = time.time() # Current time
 
-    logging.info("Time limits %s", times.astype("datetime64[s]"))
+        times = np.sort([args.stime, args.stime + args.dt])
 
-    outSize = scanDirectory(args, times)
-    print(outSize)
-except:
-    logging.exception("Unexpected exception executing %s", args)
+        logging.info("Time limits %s", times.astype("datetime64[s]"))
+
+        outSize = scanDirectory(args, times)
+        print(outSize)
+    except:
+        logging.exception("Unexpected exception executing %s", args)
+
+
+if __name__ == "__main__":
+    main()

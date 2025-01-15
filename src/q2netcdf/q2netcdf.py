@@ -349,29 +349,36 @@ def addFileIndex(ds:xr.Dataset) -> xr.Dataset:
         ds = ds.assign({name: ("ftime", [ds[name].data])})
     return ds
 
-parser = ArgumentParser()
-parser.add_argument("qfile", nargs="+", type=str, help="Q filename(s)")
-parser.add_argument("--nc", type=str, required=True, help="Output NetCDF filename")
-parser.add_argument("--compressionLevel", type=int, default=5, 
-                    help="Compression level in NetCDF file")
-args = parser.parse_args()
 
-logging.basicConfig(level=logging.DEBUG)
+def main():
+    parser = ArgumentParser()
+    parser.add_argument("qfile", nargs="+", type=str, help="Q filename(s)")
+    parser.add_argument("--nc", type=str, required=True, help="Output NetCDF filename")
+    parser.add_argument("--compressionLevel", type=int, default=5, 
+                        help="Compression level in NetCDF file")
+    args = parser.parse_args()
 
-frames = []
-for fn in args.qfile:
-    ds = loadQfile(fn)
-    if ds is not None:
-        frames.append(ds)
+    logging.basicConfig(level=logging.DEBUG)
 
-if len(frames) == 1:
-    ds = frames[0]
-else:
-    for index in range(len(frames)):
-        frames[index] = addFileIndex(frames[index])
-    ds = xr.merge(frames)
+    frames = []
+    for fn in args.qfile:
+        ds = loadQfile(fn)
+        if ds is not None:
+            frames.append(ds)
 
-ds = splitIdenties(ds)
-ds = cfCompliant(ds)
-ds = addEncoding(ds, args.compressionLevel)
-ds.to_netcdf(args.nc)
+    if len(frames) == 1:
+        ds = frames[0]
+    else:
+        for index in range(len(frames)):
+            frames[index] = addFileIndex(frames[index])
+        ds = xr.merge(frames)
+
+    ds = splitIdenties(ds)
+    ds = cfCompliant(ds)
+    ds = addEncoding(ds, args.compressionLevel)
+    ds.to_netcdf(args.nc)
+
+
+if __name__ == "__main__":
+    main()
+
