@@ -17,3 +17,5 @@ dependencies = [
 [project.scripts]
 q2netcdf = "q2netcdf.q2netcdf:main"
 mergeqfiles = "q2netcdf.mergeqfiles:main"
+mkISDPcfg = "q2netcdf.mkISDPcfg:main"
+dumpQHeader = "q2netcdf.dumpQHeader:main"
