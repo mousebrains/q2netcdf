@@ -13,6 +13,7 @@ import xarray as xr
 import logging
 import re
 import copy
+import sys
 
 def parseQconfig(config:str) -> dict:
     items = {}
@@ -365,6 +366,10 @@ def main():
         ds = loadQfile(fn)
         if ds is not None:
             frames.append(ds)
+
+    if not frames: # Empty
+        print("No data found")
+        sys.exit(0)
 
     if len(frames) == 1:
         ds = frames[0]
