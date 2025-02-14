@@ -171,7 +171,7 @@ def decimateFiles(qfiles:dict, ofn:str, totSize:int, maxSize:int) -> int:
         ratio = availSize / totDataSize
         logging.info("availSize %s ratio %s", availSize, ratio)
 
-        with open(ofn, "wb") as ofp:
+        with open(ofn, "ab") as ofp:
             if ratio <= 0:
                 logging.warning("Creating an empty file since ratio, %s, <=0", ratio)
                 st = os.fstat(ofp.fileno())
@@ -190,15 +190,15 @@ def decimateFiles(qfiles:dict, ofn:str, totSize:int, maxSize:int) -> int:
                                  item["dataSize"],
                                  item["nRecords"],
                                  indices)
-            st = os.fstat(ofp.fileno())
-            return st.st_size
+            fSize = ofp.tell()
+            return fSize
     except:
         logging.exception("Unable to decimate %s to %s", filenames, ofn)
 
-def glueFiles(filenames:list, ofn:str, bufferSize:int=1024*1024):
+def glueFiles(filenames:list, ofn:str, bufferSize:int=1024*1024) -> int:
     try:
         totSize = 0
-        with open(ofn, "wb") as ofp:
+        with open(ofn, "ab") as ofp:
             for ifn in filenames:
                 with open(ifn, "rb") as ifp:
                     while True:
@@ -207,7 +207,9 @@ def glueFiles(filenames:list, ofn:str, bufferSize:int=1024*1024):
                         ofp.write(buffer)
                         logging.info("Appended %s to %s with %s bytes", ifn, ofn, len(buffer))
                         totSize += len(buffer)
-        logging.info("Created %s with %s bytes", ofn, totSize)
+            fSize = ofp.tell()
+            logging.info("Glued %s to %s fSize %s", totSize, ofn, fSize)
+            return fSize
     except:
         logging.exception("Unable to glue %s to %s", filenames, ofn)
 
@@ -215,43 +217,44 @@ def scanDirectory(args:ArgumentParser, times:np.array) -> int:
     with os.scandir(args.datadir) as it:
         qfiles = {}
         totSize = 0
+
+        t0 = times[0].astype("datetime64[s]")
+        t1 = times[1].astype("datetime64[s]")
+
         for entry in it:
             if not entry.name.endswith(".q") or not entry.is_file():
                 continue
+            # N.B. on the MR, c_time and m_time are identical
             st = entry.stat()
-            logging.info("%s sz %s ctime %s mtime %s times %s %s",
+            qKeep = st.st_mtime >= times[0] and st.st_mtime <= times[1]
+            logging.info("%s sz %s mtime %s times %s %s qKeep %s",
                          entry.name,
                          st.st_size,
-                         np.datetime64(round(st.st_ctime * 1000), "ms"),
                          np.datetime64(round(st.st_mtime * 1000), "ms"),
-                         times[0].astype("datetime64[s]"),
-                         times[1].astype("datetime64[s]"),
+                         t0,
+                         t1,
+                         qKeep
                          )
-            if st.st_ctime > times[1] or st.st_mtime < times[0]:
-                logging.debug("Ignoring %s due to times out of range, %s>%s %s or %s<%s %s",
-                              entry.name,
-                              np.datetime64(round(st.st_ctime*1e9), "ns"),
-                              times[1].astype("datetime64[ns]"),
-                              st.st_ctime > times[1],
-                              np.datetime64(round(st.st_mtime*1e9), "ns"),
-                              times[0].astype("datetime64[ns]"),
-                              st.st_mtime < times[0],
-                              )
-                continue
-            qfiles[entry.path] = st.st_size
-            totSize += st.st_size
+            if qKeep:
+                qfiles[entry.path] = st.st_size
+                totSize += st.st_size
+
+    if os.path.isfile(args.output): # File already exist, so reduce maxsize
+        fSize = os.path.getsize(args.output)
+        args.maxSize -= fSize
+        if args.maxSize <= 0:
+            logging.info("Can't append more to file, %s >= %s", fSize, args.maxSize)
+            return fSize
+        logging.info("Reducing maxsize by %s since file already exists", fSize)
 
     logging.info("Total size %s max %s", totSize, args.maxSize)
     if totSize <= args.maxSize:
         # Glue the files together since their total size is small enough
         # This handles the no-files case and will generate an empty .mri file
-        glueFiles(sorted(qfiles, reverse=False), args.output, args.bufferSize)
-        return totSize
+        return glueFiles(sorted(qfiles, reverse=False), args.output, args.bufferSize)
 
     # Parse the qfiles and pull out roughly equally spaced in time records
-    outSize = decimateFiles(qfiles, args.output, totSize, args.maxSize)
-    return outSize
-
+    return decimateFiles(qfiles, args.output, totSize, args.maxSize)
 
 def main():
     parser = ArgumentParser()
@@ -264,6 +267,8 @@ def main():
     parser.add_argument("--datadir", type=str, default="~/data", help="Where Q-files are stored")
     parser.add_argument("--verbose", "-v", action="store_true", help="Enable logging.debug messages")
     parser.add_argument("--logfile", type=str, help="Output of logfile messages")
+    parser.add_argument("--safety", type=float, default=30,
+                        help="Extra seconds to add to end time for race condition issue")
     args = parser.parse_args()
 
     args.datadir = os.path.abspath(os.path.expanduser(args.datadir))
@@ -294,11 +299,12 @@ def main():
         if args.stime <= 0:
             args.stime = time.time() # Current time
 
-        times = np.sort([args.stime, args.stime + args.dt])
+        times = np.sort([args.stime, args.stime + args.dt + args.safety])
 
         logging.info("Time limits %s", times.astype("datetime64[s]"))
 
         outSize = scanDirectory(args, times)
+        logging.info("printing outSize %s to console", outSize)
         print(outSize)
     except:
         logging.exception("Unexpected exception executing %s", args)
