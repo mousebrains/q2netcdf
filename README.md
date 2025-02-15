@@ -21,6 +21,6 @@ python3 -m pipx install .
 - `dumpQHeader`
 - `mergeqfiles`
 - `mkISDPcfg`
-`
+
 If you don't trust `pipx` you can also directly run the scripts from the src/q2netcdf directory.
 
