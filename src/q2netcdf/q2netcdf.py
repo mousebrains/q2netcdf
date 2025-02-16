@@ -89,8 +89,6 @@ def loadQHeader(f, fn:str) -> dict:
         logging.error("Reading data record size, %s != 2, in %s", len(buffer), fn)
         return None
     (hdr["recordSize"], ) = struct.unpack("<H", buffer)
-
-    logging.info("hdr %s", hdr["time"])
     return hdr
 
 def loadQData(f, fn:str, hdr:dict) -> xr.Dataset:
@@ -134,7 +132,6 @@ def loadQData(f, fn:str, hdr:dict) -> xr.Dataset:
     return ds
 
 def loadQfile(fn:str) -> xr.Dataset:
-    logging.info("Processing %s", fn)
     records = []
     with open(fn, "rb") as f:
         hdr = None
@@ -150,6 +147,7 @@ def loadQfile(fn:str) -> xr.Dataset:
                 case 0x1729: # Header+Config record
                     hdr = loadQHeader(f, fn)
                     if hdr is None: break
+                    logging.info("Processing %s start at %s", fn, hdr["time"])
                 case 0x1657: # Data record
                     rec = loadQData(f, fn, hdr)
                     if rec is None: break
@@ -261,7 +259,7 @@ def decryptIdent(ident:int) -> tuple:
 
     key = ident & 0xfff0
     if key not in known:
-        print(f"Ident {ident:#04x} not known")
+        logging.info(f"Ident {ident:#04x} not known")
         return (None, None)
 
     cnt = ident & 0x0f
