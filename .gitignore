@@ -7,3 +7,4 @@ __pycache__
 *.python-version
 tpw*
 tkw*
+isdp*.cfg
