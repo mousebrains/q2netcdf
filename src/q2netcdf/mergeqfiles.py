@@ -5,175 +5,128 @@
 # The stock script will return a zero length file if the maximum size allowed is smaller
 # than the size of a q-file.
 #
-# This script takes equally spaced in time samples from the
-# q-files to reach the maximum allowed size.
+# This script has several modes:
+#   if no Q-file reduction is requested it finds all Q-files 
+#            modified in the specified interval plus a safety margin
+#      if their total size is less than the maximum allowed size, they are merged together
+#      else they are decimated to reach the maximum allowed size 
 #
-# The internal q-file structure is based on Rockland's TN 054
+#   if Q-file reduction is requested, the Q-files reduced sizes are estimated and then
+#            we follow the above prescription in terms of decimation
+#
+# The internal Q-file structure is based on Rockland's TN 054
+# The reduced Q-file format is a modified version of TN 054
 #
 # Oct-2024, Pat Welch, pat@mousebrains.com
+# Feb-2025, Pat Welch, pat@mousebrains.com, update module usage
+# Mar-2025, Pat Welch, pat@mousebrains.com, Reduce Q-file contents
 
 from argparse import ArgumentParser
 import os
 import time
-import struct
+from QFile import QFile
+from QHeader import QHeader
+from QConfig import QConfig
+from QReduce import QReduce
 import numpy as np
 import logging
-import re
 import math
 import sys
+import yaml
+import json
+import struct
 
-def splitHeader(buffer:bytes) -> dict:
+def reduceAndDecimate(info:dict, ofp, ofn:str, maxSize:int) -> int:
+    totHdrSize = 0
+    totDataSize = 0
+    for fn in info:
+        qr = info[fn]
+        totHdrSize += qr.hdrSize
+        totDataSize += qr.fileSize - qr.hdrSize
+
+    availSize = maxSize - totHdrSize
+    ratio = availSize / totDataSize
+    if ratio <= 0:
+        logging.warning("Not adding to %s since ratio is %s <= 0", ofn, ratio)
+        return ofp.tell()
+
+    logging.info("Sizes max %s avail %s ratio %s", maxSize, availSize, ratio)
+
+    for fn in sorted(info):
+        qr = info[fn]
+        indices = np.unique(
+                np.floor(
+                    np.linspace(
+                        0, 
+                        qr.nRecords, 
+                        np.floor(qr.nRecords * ratio).astype(int), 
+                        endpoint=False)
+                    ).astype(int)
+                )
+        sz = qr.decimate(ofp, indices)
+        logging.info("Decimated %s to %s -> %s -> %s n=%s/%s", 
+                     qr.filename, ofn, qr.fileSizeOrig, sz, indices.size, qr.nRecords.astype(int))
+    return ofp.tell()
+
+def reduceFiles(qFiles:dict, fnConfig:str, ofn:str, maxSize:int) -> int:
+    qrConfig = QReduce.loadConfig(fnConfig)
+    logging.info("Config %s -> %s", fnConfig, qrConfig)
+
     info = {}
-    for line in buffer.split(b"\n"):
-        try:
-            line = str(line, "utf-8") # It should be UTF-8
-            matches = re.fullmatch(r'[#"\s]*([\w_]+)"?\s*=>\s*"?(["\s].*)"?', line.strip())
-            if matches:
-                key = matches[1]
-                val = matches[2]
-                try:
-                    key = str(key, "utf-8")
-                    val = str(val, "utf-8")
-                except:
-                    pass
-                try:
-                    val = float(val)
-                except:
-                    pass
-                info[key] = val
-        except:
-            pass # Skip non-UTF8 lines
-    return info
+    totSize = 0
 
-def loadQHeader(fn:str) -> tuple:
-    badReturn = (None, None, None, None, None, None)
-    with open(fn, "rb") as fp:
-        buffer = fp.read(20) # Load the first 20 bytes of the header
-        if len(buffer) != 20:
-            logging.error("Reading initial header, %s!=20, in %s", len(buffer), fn)
-            return badReturn
+    for fn in qFiles:
+        qr = QReduce(fn, qrConfig)
+        totSize += qr.fileSize
+        info[fn] = qr
 
-        (ident, fVer, stime, Nc, Ns, Nf) = struct.unpack("<HfQHHH", buffer)
-
-        if ident != 0x1729:
-            logging.error(f"%s ident incorrect, {ident:#04x}!=0x1729", fn)
-            return badReturn
-
-        if abs(fVer - 1.2) > 0.0001:
-            logging.error("Invalid file version, %s, in %s", fVer, fn)
-            return badReturn
-
-        stime = np.datetime64("0000-01-01") + np.timedelta64(stime, "ms")
-
-        sz = Nc * 2 + Ns * 2 + Nf * 2 # Number of bytes in ident information
-        body = buffer
-        buffer = fp.read(sz)
-        if len(buffer) != sz:
-            logging.error("Reading Channel/Spectra/Frequency information, %s != %s in %s",
-                          len(buffer), sz, fn)
-            return badReturn
-
-        body += buffer
-
-        buffer = fp.read(4) # Read configuration ident and size
-        if len(buffer) != 4:
-            logging.error("Reading configuration header, %s != 4, in %s", len(buffer), fn)
-            return badReturn
-        body += buffer
-
-        (ident, sz) = struct.unpack("<HH", buffer)
-
-        buffer = fp.read(sz)
-        if len(buffer) != sz:
-            logging.error("Reading configuration record, %s != %s, in %s", len(buffer), sz, fn)
-            return badReturn
-        body += buffer
-        hdr = splitHeader(buffer)
-
-        buffer = fp.read(2)
-        if len(buffer) != 2:
-            logging.error("Reading data record size, %s != 2, in %s", len(buffer), fn)
-            return badReturn
-        body += buffer
-        (dataSize,) = struct.unpack("<H", buffer)
-
-        hdrSize = fp.tell()
-
-        st = os.fstat(fp.fileno())
-        nRecords = math.floor((st.st_size - hdrSize) / dataSize)
-        dissLength = hdr["diss_length"] if "diss_length" in hdr else 1
-        dt = np.timedelta64(int(hdr["diss_length"] * 1000), "ms")
-        etime = stime + dt * nRecords
-
-        return (hdrSize, dataSize, stime, etime, nRecords, dt)
-
-def loadQData(f, fn:str, hdr:dict):
-    if hdr is None:
-        logging.error("No header record before first data record in %s", fn)
-        return None
-
-    Nc = hdr["Nc"]
-    Ns = hdr["Ns"]
-    Nf = hdr["Nf"]
-
-    sz = hdr["recordSize"] - 2 # Ident already read
-
-    buffer = f.read(sz)
-    if len(buffer) != sz:
-        logging.error("Unable to read data record, %s!=%s, in %s", len(buffer), sz, fn)
-        return None
-
-    items = struct.unpack("<Hqee" + ("e" * Nc) + ("e" * Ns * Nf), buffer)
-
-    stime = (hdr["time"] + np.timedelta64(int(items[2] * 1000), "ms")).astype("datetime64[ns]")
-    etime = (hdr["time"] + np.timedelta64(int(items[3] * 1000), "ms")).astype("datetime64[ns]")
-
-    return ds
-
-def writePartialFile(ifn:str, ofp, szHeader:int, szData:int, nRecords:int, indices:np.array):
-    logging.info("Partial file %s sz %s n %s of %s", ifn, szHeader, len(indices), nRecords)
-    with open(ifn, "rb") as ifp:
-        buffer = ifp.read(szHeader)
-        if len(buffer) != szHeader: return
-        ofp.write(buffer)
-        for index in indices:
-            offset = szHeader + index * szData
-            ifp.seek(offset)
-            buffer = ifp.read(szData)
-            if len(buffer) != szData: return
-            ofp.write(buffer)
+    with open(ofn, "ab") as ofp:
+        if totSize <= maxSize: # no need to decimate, so append glued reduced files
+            for fn in sorted(info):
+                qr = info[fn]
+                sz = qr.reduceFile(ofp)
+                logging.info("Appending %s to %s, %s -> %s", fn, ofn, qr.fileSizeOrig, sz)
+        else:
+            reduceAndDecimate(info, ofp, ofn, maxSize)
+        return ofp.tell() # Actual file size
 
 
-def decimateFiles(qfiles:dict, ofn:str, totSize:int, maxSize:int) -> int:
+def decimateFiles(qFiles:dict, ofn:str, totSize:int, maxSize:int) -> int:
     try:
-        filenames = sorted(qfiles, reverse=False) # sorted filenames to work on
-        info = {}
+        filenames = sorted(qFiles, reverse=False) # sorted filenames to work on
         totHdrSize = 0
         totDataSize = 0
-        totTime = np.timedelta64(0, "s")
+        info = {}
         for ifn in filenames:
-            (hdrSize, dataSize, stime, etime, nRecords, dt) = loadQHeader(ifn)
-            totHdrSize += hdrSize
-            totDataSize += dataSize * nRecords
-            totTime += etime - stime
-            info[ifn] = dict(
-                    hdrSize = hdrSize,
-                    dataSize = dataSize,
-                    stime = stime,
-                    etime = etime,
-                    nRecords = nRecords,
-                    dt = dt,
-                    )
-            logging.info("%s n %s", ifn, nRecords)
+            try:
+                with open(ifn, "rb") as fp: 
+                    hdr = QHeader(fp, ifn)
+                    st = os.fstat(fp.fileno())
+                    item = {}
+                    item["hdrSize"] = hdr.hdrSize
+                    item["dataSize"] = hdr.dataSize
+                    item["nRecords"] = np.floor(
+                            (st.st_size - item["hdrSize"]).astype(int) / item["dataSize"]
+                            )
+                    logging.info("%s hdr %s data %s n %s",
+                                 ifn, item["hdrSize"], item["dataSize"], item["nRecords"])
+                    info[ifn] = item
+                    totHdrSize += item["hdrSize"]
+                    totDataSize += item["dataSize"] * item["nRecords"]
+            except EOFError:
+                pass
+            except:
+                logging.exception("filename %s", ifn)
 
-        logging.info("total header size %s data size %s totalTime %s", totHdrSize, totDataSize, totTime)
+        logging.info("Total header size %s data size %s", totHdrSize, totDataSize)
+
         availSize = maxSize - totHdrSize
         ratio = availSize / totDataSize
         logging.info("availSize %s ratio %s", availSize, ratio)
 
         with open(ofn, "ab") as ofp:
             if ratio <= 0:
-                logging.warning("Creating an empty file since ratio, %s, <=0", ratio)
+                logging.warning("Not adding to %s since ratio is %s <= 0", ofn, ratio)
                 st = os.fstat(ofp.fileno())
                 return st.st_size
 
@@ -182,14 +135,23 @@ def decimateFiles(qfiles:dict, ofn:str, totSize:int, maxSize:int) -> int:
                 n = item["nRecords"]
                 indices = np.unique(
                         np.floor(
-                            np.linspace(0, n, math.floor(n * ratio), endpoint=False)).astype(int)
+                            np.linspace(0, n, math.floor(n * ratio), endpoint=False))
+                        .astype(int)
                         )
-                writePartialFile(ifn,
-                                 ofp,
-                                 item["hdrSize"],
-                                 item["dataSize"],
-                                 item["nRecords"],
-                                 indices)
+                hdrSize = item["hdrSize"]
+                dataSize = item["dataSize"]
+                offsets = hdrSize + indices * dataSize
+                logging.info("Decimating file %s hdr sz %s data sz %s n %s of %s", 
+                             ifn, hdrSize, dataSize, len(offsets), item["nRecords"])
+                with open(ifn, "rb") as ifp:
+                    buffer = ifp.read(hdrSize)
+                    if len(buffer) != hdrSize: continue
+                    ofp.write(buffer)
+                    for offset in offsets:
+                        ifp.seek(offset)
+                        buffer = ifp.read(dataSize)
+                        if len(buffer) != dataSize: break
+                        ofp.write(buffer)
             fSize = ofp.tell()
             return fSize
     except:
@@ -213,48 +175,62 @@ def glueFiles(filenames:list, ofn:str, bufferSize:int=1024*1024) -> int:
     except:
         logging.exception("Unable to glue %s to %s", filenames, ofn)
 
-def scanDirectory(args:ArgumentParser, times:np.array) -> int:
+def fileCandidates(args:ArgumentParser, times:np.array) -> tuple:
     with os.scandir(args.datadir) as it:
-        qfiles = {}
+        qFiles = {}
         totSize = 0
-
-        t0 = times[0].astype("datetime64[s]")
-        t1 = times[1].astype("datetime64[s]")
-
         for entry in it:
             if not entry.name.endswith(".q") or not entry.is_file():
                 continue
             # N.B. on the MR, c_time and m_time are identical
+            # This is from mounting an exFAT filesystem with FUSE
             st = entry.stat()
             qKeep = st.st_mtime >= times[0] and st.st_mtime <= times[1]
-            logging.info("%s sz %s mtime %s times %s %s qKeep %s",
-                         entry.name,
-                         st.st_size,
-                         np.datetime64(round(st.st_mtime * 1000), "ms"),
-                         t0,
-                         t1,
-                         qKeep
-                         )
+            logger = logging.info if qKeep else logging.debug
+            logger("%s sz %s mtime %s %s",
+                   entry.name,
+                   st.st_size,
+                   np.datetime64(round(st.st_mtime * 1000), "ms"),
+                   qKeep
+                   )
             if qKeep:
-                qfiles[entry.path] = st.st_size
+                qFiles[entry.path] = st.st_size
                 totSize += st.st_size
+        return (qFiles, totSize)
+
+def scanDirectory(args:ArgumentParser, times:np.array) -> int:
+    (qFiles, totSize) = fileCandidates(args, times)
 
     if os.path.isfile(args.output): # File already exist, so reduce maxsize
         fSize = os.path.getsize(args.output)
+
+        if not qFiles: # No Q-files found, nothing to do
+            logging.info("No new files to append to %s", args.output)
+            return fSize 
+
         args.maxSize -= fSize
         if args.maxSize <= 0:
             logging.info("Can't append more to file, %s >= %s", fSize, args.maxSize)
             return fSize
-        logging.info("Reducing maxsize by %s since file already exists", fSize)
+        logging.info("Reduced maxsize by %s since file already exists", fSize)
+    elif not qFiles: # No q-files, so create empty file and return 0
+        with open(args.output, "wb") as fp:
+            pass
+        logging.info("No new files, so created an empty file %s", args.output)
+        return 0
+
+    if args.config and os.path.isfile(args.config): # We're going to reduce the size of the Q-files,
+        return reduceFiles(qFiles, args.config, args.output, args.maxSize)
 
     logging.info("Total size %s max %s", totSize, args.maxSize)
+
+
     if totSize <= args.maxSize:
         # Glue the files together since their total size is small enough
-        # This handles the no-files case and will generate an empty .mri file
-        return glueFiles(sorted(qfiles, reverse=False), args.output, args.bufferSize)
+        return glueFiles(sorted(qFiles, reverse=False), args.output, args.bufferSize)
 
-    # Parse the qfiles and pull out roughly equally spaced in time records
-    return decimateFiles(qfiles, args.output, totSize, args.maxSize)
+    # Parse the Q-files and pull out roughly equally spaced in time records
+    return decimateFiles(qFiles, args.output, totSize, args.maxSize)
 
 def main():
     parser = ArgumentParser()
@@ -269,6 +245,7 @@ def main():
     parser.add_argument("--logfile", type=str, help="Output of logfile messages")
     parser.add_argument("--safety", type=float, default=30,
                         help="Extra seconds to add to end time for race condition issue")
+    parser.add_argument("--config", type=str, help="YAML config file")
     args = parser.parse_args()
 
     args.datadir = os.path.abspath(os.path.expanduser(args.datadir))
@@ -294,10 +271,18 @@ def main():
                 filename=args.logfile,
                 )
 
-        logging.info("Args: %s", args)
+        if args.config is None:
+            fn = os.path.abspath(os.path.expanduser(os.path.join(args.datadir, "mergeqfiles.yaml")))
+            if os.path.isfile(fn): args.config = fn
+        elif args.config == "": 
+            args.config = None
+        else:
+            args.config = os.path.abspath(os.path.expanduser(args.config))
 
         if args.stime <= 0:
             args.stime = time.time() # Current time
+
+        logging.info("Args: %s", args)
 
         times = np.sort([args.stime, args.stime + args.dt + args.safety])
 
