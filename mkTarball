@@ -1,0 +1,23 @@
+#! /usr/bin/env bash
+#
+# Create a tarball for use on a MicroRider
+#
+# Mar-2025, Pat Welch, pat@mousebrains.com
+
+myPath=`dirname $0`
+
+tar \
+	-c \
+	--file microrider.tar.gz \
+	--auto-compress \
+	--directory $myPath/src/q2netcdf \
+	--verbose \
+	mergeqfiles.py \
+	mkISDPcfg.py \
+	QConfig.py \
+	QData.py \
+	QFile.py \
+	QHeader.py \
+	QHexCodes.py \
+	QReduce.py \
+	QVersion.py

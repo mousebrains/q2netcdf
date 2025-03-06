@@ -5,4 +5,5 @@ osu68?
 __pycache__
 *.egg-info
 *.python-version
-uv.lock
+tpw.*
+tkw.*
