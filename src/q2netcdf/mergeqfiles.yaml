@@ -1,0 +1,23 @@
+# To see the fields in a Q-file, use the QHeader.py command
+# 
+# Mar-2025, Pat Welch, pat@mousebrains.com
+#
+# which config fields to retain
+#
+# config:
+  # - diss_length
+  # - fft_length
+
+# Which scalar channels to retain
+# channels:
+  # - e_1
+  # - e_2
+  # - FM_1
+  # - FM_2
+  # - T_1
+  # - T_2
+
+# Which spectra to retain
+# spectra:
+  # - shear_gfd_1
+  # - shear_gfd_2
