@@ -6,7 +6,10 @@
 
 
 def main():
-    import QHeader
+    try:
+        import QHeader
+    except:
+        from q2netcdf import QHeader
 
     QHeader.main()
 

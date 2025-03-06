@@ -7,9 +7,13 @@
 import struct
 import logging
 import numpy as np
-from QConfig import QConfig
-from QVersion import QVersion
 from enum import Enum
+try:
+    from QConfig import QConfig
+    from QVersion import QVersion
+except:
+    from q2netcdf.QConfig import QConfig
+    from q2netcdf.QVersion import QVersion
 
 class QHeader:
     headerIdent = 0x1729 # Ident for header records
@@ -124,7 +128,10 @@ class QHeader:
 def main():
     from argparse import ArgumentParser
     import os.path
-    from QHexCodes import QHexCodes
+    try:
+        from QHexCodes import QHexCodes
+    except:
+        from q2netcdf.QHexCodes import QHexCodes
 
     parser = ArgumentParser()
     parser.add_argument("filename", type=str, nargs="+", help="Input filename(s)")

@@ -4,18 +4,36 @@ build-backend = "hatchling.build"
 
 [project]
 name = "q2netcdf"
-version = "0.1.0"
-description = "Add your description here"
+version = "0.1.1"
+authors = [{name="Pat Welch", email="pat@mousebrains.com"}]
+maintainers = [{name="Pat Welch", email="pat@mousebrains.com"}]
+description = "Manipulate Rockland Scientific's Q-files"
 readme = "README.md"
+license = "GPL-3.0-or-later"
+keywords = ["Rockland", "MicroRider", "Q-file", "ISDP"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Science/Research",
+  "Topic :: Scientific/Engineering :: Oceanography",
+  "Programming Language :: Python :: 3",
+]
 requires-python = ">=3.11"
 dependencies = [
+    "q2netcdf", # Force inclusion of myself for modules
     "netcdf4>=1.7.2",
     "numpy>=2.2.1",
     "xarray>=2025.1.1",
+    "pyyaml>=6.0.0",
 ]
+
+[project.urls]
+Repository = "https://github.com/mousebrains/q2netcdf"
 
 [project.scripts]
 q2netcdf = "q2netcdf.q2netcdf:main"
 mergeqfiles = "q2netcdf.mergeqfiles:main"
 mkISDPcfg = "q2netcdf.mkISDPcfg:main"
 dumpQHeader = "q2netcdf.dumpQHeader:main"
+QHeader = "q2netcdf.QHeader:main"
+QFile = "q2netcdf.QFile:main"
+QReduce = "q2netcdf.QReduce:main"

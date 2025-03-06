@@ -6,8 +6,12 @@
 
 import os.path
 import logging
-from QHeader import QHeader
-from QData import QData, QRecord
+try:
+    from QHeader import QHeader
+    from QData import QData, QRecord
+except:
+    from q2netcdf.QHeader import QHeader
+    from q2netcdf.QData import QData, QRecord
 
 class QFile:
     def __init__(self, fn:str) -> None:

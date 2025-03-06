@@ -5,10 +5,14 @@
 # Feb-2025, Pat Welch, pat@mousebrains.com
 
 import struct
-from QHeader import QHeader
-from QHexCodes import QHexCodes
 import numpy as np
 import logging
+try:
+    from QHeader import QHeader
+    from QHexCodes import QHexCodes
+except:
+    from q2netcdf.QHeader import QHeader
+    from q2netcdf.QHexCodes import QHexCodes
 
 class QRecord:
     def __init__(self, hdr:QHeader, number:int, err:int, stime:float, etime:float, 

@@ -8,14 +8,19 @@
 # Feb-2025, Pat Welch, pat@mousebrains.com update to using QFile...
 
 from argparse import ArgumentParser
-from QHeader import QHeader
-from QData import QData
-from QFile import QFile
 import numpy as np
 import xarray as xr
 import logging
 import sys
 import struct
+try:
+    from QHeader import QHeader
+    from QData import QData
+    from QFile import QFile
+except:
+    from q2netcdf.QHeader import QHeader
+    from q2netcdf.QData import QData
+    from q2netcdf.QFile import QFile
 
 def loadQfile(fn:str) -> xr.Dataset:
     records = []

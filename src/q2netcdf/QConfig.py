@@ -6,7 +6,10 @@
 import re
 import numpy as np
 import json
-from QVersion import QVersion
+try:
+    from QVersion import QVersion
+except:
+    from q2netcdf.QVersion import QVersion
 
 class QConfig:
     def __init__(self, config:str, version:QVersion) -> None:

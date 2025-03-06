@@ -24,10 +24,6 @@
 from argparse import ArgumentParser
 import os
 import time
-from QFile import QFile
-from QHeader import QHeader
-from QConfig import QConfig
-from QReduce import QReduce
 import numpy as np
 import logging
 import math
@@ -35,6 +31,16 @@ import sys
 import yaml
 import json
 import struct
+try:
+    from QFile import QFile
+    from QHeader import QHeader
+    from QConfig import QConfig
+    from QReduce import QReduce
+except:
+    from q2netcdf.QFile import QFile
+    from q2netcdf.QHeader import QHeader
+    from q2netcdf.QConfig import QConfig
+    from q2netcdf.QReduce import QReduce
 
 def reduceAndDecimate(info:dict, ofp, ofn:str, maxSize:int) -> int:
     totHdrSize = 0

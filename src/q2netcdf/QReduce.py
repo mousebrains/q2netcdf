@@ -8,16 +8,22 @@
 #
 # Mar-2025, Pat Welch, pat@mousebrains.com
 
-from QHeader import QHeader
-from QData import QData
-from QHexCodes import QHexCodes
-from QVersion import QVersion
 import yaml
 import json
 import logging
 import struct
 import os
 import numpy as np
+try:
+    from QHeader import QHeader
+    from QData import QData
+    from QHexCodes import QHexCodes
+    from QVersion import QVersion
+except:
+    from q2netcdf.QHeader import QHeader
+    from q2netcdf.QData import QData
+    from q2netcdf.QHexCodes import QHexCodes
+    from q2netcdf.QVersion import QVersion
 
 class QReduce:
     __name2ident = {}
