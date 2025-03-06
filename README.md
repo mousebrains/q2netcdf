@@ -29,5 +29,5 @@ To update to the latest package, one needs to add the `--force` option:
 
 If you don't trust `pipx` you can also clone 
 https://github.com/mousebrains/q2netcdf
-directly run the scripts from the src/q2netcdf directory.
+directly and run the scripts from the src/q2netcdf directory.
 
