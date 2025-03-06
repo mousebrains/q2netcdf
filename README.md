@@ -12,6 +12,10 @@
 The command line scripts in this package may be installed using 
 [pipx](https://pipx.pypa.io/stable/installation/)
 
+` python3 -m pipx install git+https://github.com/mousebrains/q2netcdf`
+
+To update to the latest package, one needs to add the `--force` option:
+
 ` python3 -m pipx install --force git+https://github.com/mousebrains/q2netcdf`
 
 `pipx` will install in a pipxy fashion:
