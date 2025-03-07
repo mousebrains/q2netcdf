@@ -80,7 +80,7 @@ def loadQfile(fn:str) -> xr.Dataset:
     ftime = ds.time.data.min()
     ds = ds.assign_coords(ftime=[ftime], despike=np.arange(3))
 
-    toAdd = dict(fileversion=("ftime", [hdr.version]))
+    toAdd = dict(fileversion=("ftime", [hdr.version.value]))
 
     config = hdr.config.config()
     for key in config: 
@@ -148,7 +148,7 @@ def addEncoding(ds:xr.Dataset, level:int=5) -> xr.Dataset:
     if level <= 0: return ds
 
     for name in ds:
-        if ds[name].dtype == "object": continue
+        if ds[name].dtype.kind == "U": continue
         ds[name].encoding = {'compression': 'zlib', 'compression_level': level}
 
     return ds
