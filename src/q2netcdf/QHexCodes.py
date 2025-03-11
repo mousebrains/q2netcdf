@@ -36,7 +36,7 @@ class QHexCodes:
                     ],
             0x120: [["A0", "Ax", "Ay"],
                     {
-                        "long_name": "piezo_0", ["piezo_X", "piezo_Y",],
+                        "long_name": ["piezo_0", "piezo_X", "piezo_Y",],
                         },
                     ],
             0x130: [["Incl_0", "Incl_X", "Incl_Y", "Incl_T"],
