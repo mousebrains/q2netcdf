@@ -7,7 +7,12 @@
 - `mergeqfiles.py` merges Q-files together. This is designed to be run on the MicroRider as `/usr/local/bin/mergeqfiles` in support of [TWR's Slocum Glider uRider proglet](https://www.teledynemarine.com/brands/webb-research/slocum-glider) 
 - `mkISDPcfg.py` generates syntatically correct `isdp.cfg` files. It is designed to be run on the MR
 
-## Installation
+## Installation on the MicroRider
+- Run `mkZip` to create `microrider.zip`
+- Transfer `microrider.zip` to the MicroRider
+- Unzip the `microrider.zip` file using `unzip -o -d /usr/local/bin microrider.zip`
+
+## Installation on your local system
 
 The command line scripts in this package may be installed using 
 [pipx](https://pipx.pypa.io/stable/installation/)

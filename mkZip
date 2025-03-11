@@ -1,0 +1,21 @@
+#! /usr/bin/env bash
+#
+# Create a zip file for use on a MicroRider
+#
+# Mar-2025, Pat Welch, pat@mousebrains.com
+
+myPath=`dirname $0`
+prefix=$myPath/src/q2netcdf
+
+zip \
+	--junk-paths \
+	$myPath/microrider.zip \
+	$prefix/mergeqfiles \
+	$prefix/mkISDPcfg.py \
+	$prefix/QConfig.py \
+	$prefix/QData.py \
+	$prefix/QFile.py \
+	$prefix/QHeader.py \
+	$prefix/QHexCodes.py \
+	$prefix/QReduce.py \
+	$prefix/QVersion.py

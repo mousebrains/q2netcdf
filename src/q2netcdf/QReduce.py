@@ -8,7 +8,6 @@
 #
 # Mar-2025, Pat Welch, pat@mousebrains.com
 
-import yaml
 import json
 import logging
 import struct
@@ -60,7 +59,7 @@ class QReduce:
             body += np.array(hdr.frequencies).astype("<f2").tobytes()
 
         myConfig = {}
-        if "config" in config:
+        if isinstance(config, dict) and "config" in config:
             hdrConfig = hdr.config.config()
             for name in config["config"]:
                 if name in hdrConfig:
@@ -97,13 +96,24 @@ class QReduce:
     @classmethod
     def loadConfig(cls, filename:str) -> dict:
         if os.path.isfile(filename):
-            with open(filename, "r") as fp:
-                config = yaml.safe_load(fp)
-                cls.__updateName2Ident(config, "channels")
-                cls.__updateName2Ident(config, "spectra")
-                return config
+            try:
+                with open(filename, "r") as fp:
+                    config = json.load(fp)
+                    if not isinstance(config, dict):
+                        logging.error("%s config %s is not a dictionary", filename, config)
+                        return None
+                    for key in ["config", "channels", "spectra"]:
+                        if key not in config:
+                            logging.error("%s is not in %s, %s", key, filename, config)
+                            return None
+                    cls.__updateName2Ident(config, "channels")
+                    cls.__updateName2Ident(config, "spectra")
+                    return config
+            except:
+                logging.exception("Loading %s", filename)
+                return None
         else:
-            return {}
+            return None
 
     @staticmethod
     def __spectraIndices(hdr:QHeader, indices:np.ndarray) -> np.ndarray:
@@ -124,6 +134,7 @@ class QReduce:
 
     @classmethod
     def __updateName2Ident(cls, config:dict, key:str) -> list:
+        if not isinstance(config, dict): return None
         if key not in config or not isinstance(config[key], list): 
             return None
 
@@ -186,8 +197,8 @@ def main():
     parser = ArgumentParser(description="Reduce the size of a Q-file")
     parser.add_argument("filename", type=__chkExists, help="Q-file to reduce")
     parser.add_argument("--output", type=str, help="Output file name")
-    parser.add_argument("--config", type=__chkExists, default="mergeqfiles.yaml",
-                        help="YAML configuration file")
+    parser.add_argument("--config", type=__chkExists, default="mergeqfiles.cfg",
+                        help="JSON configuration file")
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")

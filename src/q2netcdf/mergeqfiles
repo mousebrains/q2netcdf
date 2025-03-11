@@ -28,9 +28,6 @@ import numpy as np
 import logging
 import math
 import sys
-import yaml
-import json
-import struct
 try:
     from QFile import QFile
     from QHeader import QHeader
@@ -77,6 +74,7 @@ def reduceAndDecimate(info:dict, ofp, ofn:str, maxSize:int) -> int:
 def reduceFiles(qFiles:dict, fnConfig:str, ofn:str, maxSize:int) -> int:
     qrConfig = QReduce.loadConfig(fnConfig)
     logging.info("Config %s -> %s", fnConfig, qrConfig)
+    if qrConfig is None: return None
 
     info = {}
     totSize = 0
@@ -112,7 +110,7 @@ def decimateFiles(qFiles:dict, ofn:str, totSize:int, maxSize:int) -> int:
                     item["hdrSize"] = hdr.hdrSize
                     item["dataSize"] = hdr.dataSize
                     item["nRecords"] = np.floor(
-                            (st.st_size - item["hdrSize"]).astype(int) / item["dataSize"]
+                            int(st.st_size - item["hdrSize"]) / item["dataSize"]
                             )
                     logging.info("%s hdr %s data %s n %s",
                                  ifn, item["hdrSize"], item["dataSize"], item["nRecords"])
@@ -226,7 +224,9 @@ def scanDirectory(args:ArgumentParser, times:np.array) -> int:
         return 0
 
     if args.config and os.path.isfile(args.config): # We're going to reduce the size of the Q-files,
-        return reduceFiles(qFiles, args.config, args.output, args.maxSize)
+        value =  reduceFiles(qFiles, args.config, args.output, args.maxSize)
+        # Fall through if config is empty
+        if value is not None: return value
 
     logging.info("Total size %s max %s", totSize, args.maxSize)
 
@@ -251,7 +251,7 @@ def main():
     parser.add_argument("--logfile", type=str, help="Output of logfile messages")
     parser.add_argument("--safety", type=float, default=30,
                         help="Extra seconds to add to end time for race condition issue")
-    parser.add_argument("--config", type=str, help="YAML config file")
+    parser.add_argument("--config", type=str, help="JSON config file")
     args = parser.parse_args()
 
     args.datadir = os.path.abspath(os.path.expanduser(args.datadir))
@@ -278,7 +278,7 @@ def main():
                 )
 
         if args.config is None:
-            fn = os.path.abspath(os.path.expanduser(os.path.join(args.datadir, "mergeqfiles.yaml")))
+            fn = os.path.abspath(os.path.expanduser(os.path.join(args.datadir, "mergeqfiles.cfg")))
             if os.path.isfile(fn): args.config = fn
         elif args.config == "": 
             args.config = None

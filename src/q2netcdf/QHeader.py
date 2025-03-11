@@ -55,6 +55,9 @@ class QHeader:
         self.dtBinary = dt
         self.time = np.datetime64("0000-01-01") + np.timedelta64(dt, "ms")
 
+        self.channels = None
+        self.spectra = None
+
         if self.Nc: # Some channel identifiers to read
             sz = self.Nc * 2
             buffer = fp.read(sz) # Get channel identifiers
