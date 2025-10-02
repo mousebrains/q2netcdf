@@ -27,19 +27,33 @@ import time
 import numpy as np
 import logging
 import math
-import sys
-try:
-    from QFile import QFile
-    from QHeader import QHeader
-    from QConfig import QConfig
-    from QReduce import QReduce
-except:
-    from q2netcdf.QFile import QFile
-    from q2netcdf.QHeader import QHeader
-    from q2netcdf.QConfig import QConfig
-    from q2netcdf.QReduce import QReduce
+try: # First try from parent directory
+    from .QFile import QFile
+    from .QHeader import QHeader
+    from .QConfig import QConfig
+    from .QReduce import QReduce
+except ImportError:
+    try: # Then try from current directory
+        from QFile import QFile
+        from QHeader import QHeader
+        from QConfig import QConfig
+        from QReduce import QReduce
+    except ImportError:
+        raise
 
-def reduceAndDecimate(info:dict, ofp, ofn:str, maxSize:int) -> int:
+def reduceAndDecimate(info: dict, ofp, ofn: str, maxSize: int) -> int:
+    """
+    Reduce and decimate Q-files to fit within maximum size.
+
+    Args:
+        info: Dictionary mapping filenames to QReduce objects
+        ofp: Output file pointer
+        ofn: Output filename
+        maxSize: Maximum output file size in bytes
+
+    Returns:
+        Total bytes written
+    """
     totHdrSize = 0
     totDataSize = 0
     for fn in info:
@@ -71,7 +85,19 @@ def reduceAndDecimate(info:dict, ofp, ofn:str, maxSize:int) -> int:
                      qr.filename, ofn, qr.fileSizeOrig, sz, indices.size, qr.nRecords.astype(int))
     return ofp.tell()
 
-def reduceFiles(qFiles:dict, fnConfig:str, ofn:str, maxSize:int) -> int:
+def reduceFiles(qFiles: dict, fnConfig: str, ofn: str, maxSize: int) -> int | None:
+    """
+    Reduce Q-files using configuration and write to output.
+
+    Args:
+        qFiles: Dictionary of Q-files to reduce
+        fnConfig: Path to JSON configuration file
+        ofn: Output filename
+        maxSize: Maximum output file size in bytes
+
+    Returns:
+        Total bytes written or None if config loading failed
+    """
     qrConfig = QReduce.loadConfig(fnConfig)
     logging.info("Config %s -> %s", fnConfig, qrConfig)
     if qrConfig is None: return None
@@ -95,7 +121,19 @@ def reduceFiles(qFiles:dict, fnConfig:str, ofn:str, maxSize:int) -> int:
         return ofp.tell() # Actual file size
 
 
-def decimateFiles(qFiles:dict, ofn:str, totSize:int, maxSize:int) -> int:
+def decimateFiles(qFiles: dict, ofn: str, totSize: int, maxSize: int) -> int:
+    """
+    Decimate Q-files to fit within maximum size.
+
+    Args:
+        qFiles: Dictionary of Q-files to decimate
+        ofn: Output filename
+        totSize: Total size of input files
+        maxSize: Maximum output file size in bytes
+
+    Returns:
+        Total bytes written
+    """
     try:
         filenames = sorted(qFiles, reverse=False) # sorted filenames to work on
         totHdrSize = 0
@@ -119,7 +157,7 @@ def decimateFiles(qFiles:dict, ofn:str, totSize:int, maxSize:int) -> int:
                     totDataSize += item["dataSize"] * item["nRecords"]
             except EOFError:
                 pass
-            except:
+            except (OSError, ValueError):
                 logging.exception("filename %s", ifn)
 
         logging.info("Total header size %s data size %s", totHdrSize, totDataSize)
@@ -158,10 +196,22 @@ def decimateFiles(qFiles:dict, ofn:str, totSize:int, maxSize:int) -> int:
                         ofp.write(buffer)
             fSize = ofp.tell()
             return fSize
-    except:
+    except (OSError, ValueError) as e:
         logging.exception("Unable to decimate %s to %s", filenames, ofn)
+        return 0
 
-def glueFiles(filenames:list, ofn:str, bufferSize:int=1024*1024) -> int:
+def glueFiles(filenames: list[str], ofn: str, bufferSize: int = 1024*1024) -> int:
+    """
+    Concatenate Q-files into single output file.
+
+    Args:
+        filenames: List of input filenames to concatenate
+        ofn: Output filename
+        bufferSize: Size of read buffer in bytes
+
+    Returns:
+        Total bytes written
+    """
     try:
         totSize = 0
         with open(ofn, "ab") as ofp:
@@ -176,10 +226,21 @@ def glueFiles(filenames:list, ofn:str, bufferSize:int=1024*1024) -> int:
             fSize = ofp.tell()
             logging.info("Glued %s to %s fSize %s", totSize, ofn, fSize)
             return fSize
-    except:
+    except OSError as e:
         logging.exception("Unable to glue %s to %s", filenames, ofn)
+        return 0
 
-def fileCandidates(args:ArgumentParser, times:np.array) -> tuple:
+def fileCandidates(args: ArgumentParser, times: np.ndarray) -> tuple[dict, int]:
+    """
+    Find Q-file candidates within time range.
+
+    Args:
+        args: Parsed command-line arguments
+        times: Array with [start_time, end_time] in seconds since epoch
+
+    Returns:
+        Tuple of (qFiles dict mapping paths to sizes, total size in bytes)
+    """
     with os.scandir(args.datadir) as it:
         qFiles = {}
         totSize = 0
@@ -202,7 +263,17 @@ def fileCandidates(args:ArgumentParser, times:np.array) -> tuple:
                 totSize += st.st_size
         return (qFiles, totSize)
 
-def scanDirectory(args:ArgumentParser, times:np.array) -> int:
+def scanDirectory(args: ArgumentParser, times: np.ndarray) -> int:
+    """
+    Scan directory for Q-files and merge/reduce them.
+
+    Args:
+        args: Parsed command-line arguments
+        times: Array with [start_time, end_time] in seconds since epoch
+
+    Returns:
+        Total bytes written to output file
+    """
     (qFiles, totSize) = fileCandidates(args, times)
 
     if os.path.isfile(args.output): # File already exist, so reduce maxsize
@@ -238,7 +309,8 @@ def scanDirectory(args:ArgumentParser, times:np.array) -> int:
     # Parse the Q-files and pull out roughly equally spaced in time records
     return decimateFiles(qFiles, args.output, totSize, args.maxSize)
 
-def main():
+def main() -> None:
+    """Command-line interface for mergeqfiles."""
     parser = ArgumentParser()
     parser.add_argument("stime", type=float, help="Unix seconds for earliest sample, or 0 for now")
     parser.add_argument("dt", type=float, help="Seconds added to stime for other end of samples")
@@ -257,7 +329,7 @@ def main():
     args.datadir = os.path.abspath(os.path.expanduser(args.datadir))
 
     if not os.path.isdir(args.datadir):
-        print(f"ERROR: Data directory '{args.datadir}' does not exist")
+        print(f"ERROR: Data directory \"{args.datadir}\" does not exist")
         sys.exit(1)
 
     try:
@@ -297,8 +369,9 @@ def main():
         outSize = scanDirectory(args, times)
         logging.info("printing outSize %s to console", outSize)
         print(outSize)
-    except:
+    except Exception as e:
         logging.exception("Unexpected exception executing %s", args)
+        sys.exit(1)
 
 
 if __name__ == "__main__":

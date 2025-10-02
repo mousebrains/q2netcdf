@@ -1,0 +1,36 @@
+# Set default behavior to automatically normalize line endings
+* text=auto
+
+# Python files
+*.py text eol=lf diff=python
+
+# Shell scripts
+*.sh text eol=lf
+
+# Documentation
+*.md text eol=lf
+*.txt text eol=lf
+
+# Configuration files
+*.yaml text eol=lf
+*.yml text eol=lf
+*.toml text eol=lf
+*.cfg text eol=lf
+*.json text eol=lf
+
+# Q-files and other binary formats
+*.q binary
+*.mri binary
+*.p binary
+
+# NetCDF files
+*.nc binary
+
+# ZIP files
+*.zip binary
+
+# Images
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary

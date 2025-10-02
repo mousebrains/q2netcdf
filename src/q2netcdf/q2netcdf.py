@@ -1,6 +1,6 @@
 #! /usr/bin/env python3
 #
-# Translatea Rockland ISDP Q file(s) to a NetCDF file
+# Translate Rockland ISDP Q file(s) to a NetCDF file
 #
 # Based on Rockland TN 054
 #
@@ -13,16 +13,29 @@ import xarray as xr
 import logging
 import sys
 import struct
-try:
-    from QHeader import QHeader
-    from QData import QData
-    from QFile import QFile
-except:
-    from q2netcdf.QHeader import QHeader
-    from q2netcdf.QData import QData
-    from q2netcdf.QFile import QFile
+try: # First try parent directory
+    from .QHeader import QHeader
+    from .QData import QData
+    from .QFile import QFile
+except ImportError:
+    try: # Then try local directory
+        from QHeader import QHeader
+        from QData import QData
+        from QFile import QFile
+    except ImportError:
+        raise
 
-def loadQfile(fn:str) -> xr.Dataset:
+def loadQfile(fn:str) -> xr.Dataset | None:
+    """
+    Load a Q-file and convert it to an xarray Dataset.
+
+    Args:
+        fn: Path to Q-file
+
+    Returns:
+        xarray.Dataset with time-indexed data variables for all channels
+        and spectra, or None if file is invalid/empty
+    """
     records = []
     hdr = None
     with open(fn, "rb") as fp:
@@ -63,16 +76,15 @@ def loadQfile(fn:str) -> xr.Dataset:
                 buffer = fp.read(2)
                 if len(buffer) != 2: break # EOF
                 (ident,) = struct.unpack("<H", buffer)
-                logging.warning(f"Unsupported identfier, {ident:#06x}, at %s in %s", 
-                                fp.tell()-2, fn)
+                logging.warning(f"Unsupported identifier, {ident:#06x}, at {fp.tell()-2} in {fn}")
                 break
 
     if not hdr:
-        logging.warning("No header found in %s", fn)
+        logging.warning(f"No header found in {fn}")
         return None
 
     if not records:
-        logging.warning("No records found in %s", fn)
+        logging.warning(f"No records found in {fn}")
         return None
 
     ds = xr.concat(records, "time")
@@ -97,6 +109,15 @@ def loadQfile(fn:str) -> xr.Dataset:
     return ds
 
 def cfCompliant(ds:xr.Dataset) -> xr.Dataset:
+    """
+    Add CF-1.8 compliant metadata to Dataset.
+
+    Args:
+        ds: Input Dataset
+
+    Returns:
+        Dataset with added attributes for CF compliance
+    """
     known = {
             "time": {"long_name": "time_start_of_interval",},
             "t1": {"long_name": "time_end_of_interval",},
@@ -144,7 +165,17 @@ def cfCompliant(ds:xr.Dataset) -> xr.Dataset:
 
     return ds
 
-def addEncoding(ds:xr.Dataset, level:int=5) -> xr.Dataset:
+def addEncoding(ds: xr.Dataset, level: int = 5) -> xr.Dataset:
+    """
+    Add zlib compression encoding to Dataset variables.
+
+    Args:
+        ds: Input Dataset
+        level: Compression level (0-9), 0 disables compression
+
+    Returns:
+        Dataset with compression encoding added
+    """
     if level <= 0: return ds
 
     for name in ds:
@@ -153,15 +184,19 @@ def addEncoding(ds:xr.Dataset, level:int=5) -> xr.Dataset:
 
     return ds
 
-def main():
+def main() -> None:
+    """Command-line interface for q2netcdf converter."""
     parser = ArgumentParser()
     parser.add_argument("qfile", nargs="+", type=str, help="Q filename(s)")
     parser.add_argument("--nc", type=str, required=True, help="Output NetCDF filename")
-    parser.add_argument("--compressionLevel", type=int, default=5, 
+    parser.add_argument("--compressionLevel", type=int, default=5,
                         help="Compression level in NetCDF file")
+    parser.add_argument("--logLevel", type=str, default="INFO",
+                        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+                        help="Logging level")
     args = parser.parse_args()
 
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=getattr(logging, args.logLevel))
 
     frames = []
     for fn in args.qfile:

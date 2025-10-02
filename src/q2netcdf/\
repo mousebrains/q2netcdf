@@ -7,18 +7,15 @@
 import struct
 import logging
 import numpy as np
-
-try: # First try from parent directory
+from enum import Enum
+try:
     from .QConfig import QConfig
     from .QVersion import QVersion
     from .QRecordType import RecordType
-except ImportError:
-    try: # Next try from local directory
-        from QConfig import QConfig
-        from QVersion import QVersion
-        from QRecordType import RecordType
-    except ImportError:
-        raise
+except: ImportError
+    from QConfig import QConfig
+    from QVersion import QVersion
+    from QRecordType import RecordType
 
 class QHeader:
     """
@@ -147,13 +144,10 @@ def main() -> None:
     """Command-line interface for QHeader."""
     from argparse import ArgumentParser
     import os.path
-    try: # First try from parent directory
+    try:
         from .QHexCodes import QHexCodes
-    except ImportError: # Next try from local directory
-        try:
-            from QHexCodes import QHexCodes
-        except ImportError:
-            raise
+    except: ImportError
+        from QHexCodes import QHexCodes
 
     parser = ArgumentParser()
     parser.add_argument("filename", type=str, nargs="+", help="Input filename(s)")

@@ -1,34 +1,58 @@
 #! /usr/bin/env python3
 #
-# Read and parse Q-file data recrods
+# Read and parse Q-file data records
 #
 # Feb-2025, Pat Welch, pat@mousebrains.com
 
 import struct
 import numpy as np
 import logging
-try:
-    from QHeader import QHeader
-    from QHexCodes import QHexCodes
-except:
-    from q2netcdf.QHeader import QHeader
-    from q2netcdf.QHexCodes import QHexCodes
+try: # First try from parent directory
+    from .QHeader import QHeader
+    from .QHexCodes import QHexCodes
+    from .QRecordType import RecordType
+except ImportError:
+    try: # Next try from current directory
+        from QHeader import QHeader
+        from QHexCodes import QHexCodes
+        from QRecordType import RecordType
+    except ImportError:
+        raise
 
 class QRecord:
-    def __init__(self, hdr:QHeader, number:int, err:int, stime:float, etime:float, 
+    """
+    Container for a single Q-file data record.
+
+    Attributes:
+        number: Record sequence number (v1.2 only)
+        error: Error code (v1.2 only)
+        t0: Start time as numpy datetime64[ns]
+        t1: End time as numpy datetime64[ns] (v1.2 only)
+        channels: Array of scalar channel values
+        spectra: 2D array of spectra values [spectra_index, frequency]
+    """
+
+    def __init__(self, hdr:QHeader, number:int, err:int, stime:float, etime:float,
                  items:list) -> None:
         self.number = number
         self.error = err
-        self.t0 = (hdr.time + 
+        self.t0 = (hdr.time +
                    np.array(stime * 1000).astype("timedelta64[ms]")).astype("datetime64[ns]")
         if etime is not None:
-            self.t1 = (hdr.time + 
+            self.t1 = (hdr.time +
                        np.array(etime * 1000).astype("timedelta64[ms]")).astype("datetime64[ns]")
         else:
             self.t1 = None
-        self.channels = np.array(items[:hdr.Nc]).astype("f4")
-        self.spectra = np.array(items[hdr.Nc:]).astype("f4")
-        self.spectra = self.spectra.reshape((hdr.Ns, hdr.Nf))
+
+        # Pre-allocate arrays with correct dtype and shape for better performance
+        self.channels = np.empty(hdr.Nc, dtype="f4")
+        self.channels[:] = items[:hdr.Nc]
+
+        if hdr.Ns > 0 and hdr.Nf > 0:
+            self.spectra = np.empty((hdr.Ns, hdr.Nf), dtype="f4")
+            self.spectra[:] = np.array(items[hdr.Nc:], dtype="f4").reshape((hdr.Ns, hdr.Nf))
+        else:
+            self.spectra = np.empty((0, 0), dtype="f4")
 
     def __repr__(self) -> str:
         msg = []
@@ -102,7 +126,12 @@ class QRecord:
         return "\n".join(msg)
 
 class QData:
-    dataIdent = 0x1657
+    """
+    Parser for Q-file data records.
+
+    Reads binary data records and converts them to QRecord objects
+    based on the header configuration.
+    """
 
     def __init__(self, hdr:QHeader) -> None:
         self.__hdr = hdr
@@ -112,15 +141,15 @@ class QData:
             self.__format = "<He" + ("e" * hdr.Nc) + ("e" * hdr.Ns * hdr.Nf)
 
     @classmethod
-    def chkIdent(cls, fp) -> bool:
+    def chkIdent(cls, fp) -> bool | None:
         n = 2
         buffer = fp.read(n)
         if len(buffer) != n: return None
         (ident,) = struct.unpack("<H", buffer)
         fp.seek(-n, 1) # Backup n bytes
-        return ident == cls.dataIdent # A data ident
+        return ident == RecordType.DATA.value
 
-    def load(self, fp) -> QRecord:
+    def load(self, fp) -> QRecord | None:
         hdr = self.__hdr
         buffer = fp.read(hdr.dataSize)
         if len(buffer) != hdr.dataSize: return None # EOF while reading
@@ -136,9 +165,8 @@ class QData:
             err = None
             etime = None
 
-        if ident != self.dataIdent:
-            logging.warning(f"Data record identifier mismatch, {ident:#06x} != {self.dataIdent:#06x} in at byte %s in %s",
-                            fp.tell() - len(buffer), self.__hdr.filename)
+        if ident != RecordType.DATA.value:
+            logging.warning(f"Data record identifier mismatch, {ident:#06x} != {RecordType.DATA.value:#06x} at byte {fp.tell() - len(buffer)} in {self.__hdr.filename}")
 
         record = QRecord(hdr, number, err, stime, etime, items[offset:])
         return record

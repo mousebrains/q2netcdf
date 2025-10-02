@@ -1,0 +1,76 @@
+# Pre-commit hooks for q2netcdf
+# Install: pip install pre-commit
+# Setup: pre-commit install
+# Run: pre-commit run --all-files
+
+repos:
+  # Ruff for linting and formatting
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.1.15
+    hooks:
+      # Run linter
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+      # Run formatter
+      - id: ruff-format
+
+  # Type checking with mypy
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.8.0
+    hooks:
+      - id: mypy
+        additional_dependencies: [numpy, xarray, types-PyYAML]
+        args: [--ignore-missing-imports]
+
+  # General file checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      # Prevent large files from being committed
+      - id: check-added-large-files
+        args: [--maxkb=1000]
+      # Check for files that would conflict on case-insensitive filesystems
+      - id: check-case-conflict
+      # Check for merge conflicts
+      - id: check-merge-conflict
+      # Check YAML syntax
+      - id: check-yaml
+      # Check TOML syntax
+      - id: check-toml
+      # Check JSON syntax
+      - id: check-json
+      # Ensure files end with newline
+      - id: end-of-file-fixer
+      # Trim trailing whitespace
+      - id: trailing-whitespace
+      # Check for debugger imports
+      - id: debug-statements
+      # Check for proper shebang
+      - id: check-shebang-scripts-are-executable
+      # Detect private keys
+      - id: detect-private-key
+
+  # Security checks
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.6
+    hooks:
+      - id: bandit
+        args: [-c, pyproject.toml]
+        additional_dependencies: ["bandit[toml]"]
+
+# Configuration
+default_language_version:
+  python: python3.11
+
+# Files to exclude
+exclude: |
+  (?x)^(
+      \.git/.*|
+      \.pytest_cache/.*|
+      __pycache__/.*|
+      \.mypy_cache/.*|
+      \.ruff_cache/.*|
+      build/.*|
+      dist/.*|
+      .*\.egg-info/.*
+  )$

@@ -13,21 +13,33 @@ import logging
 import struct
 import os
 import numpy as np
-try:
-    from QHeader import QHeader
-    from QData import QData
-    from QHexCodes import QHexCodes
-    from QVersion import QVersion
-except:
-    from q2netcdf.QHeader import QHeader
-    from q2netcdf.QData import QData
-    from q2netcdf.QHexCodes import QHexCodes
-    from q2netcdf.QVersion import QVersion
+try: # First try from parent directory
+    from .QHeader import QHeader
+    from .QData import QData
+    from .QHexCodes import QHexCodes
+    from .QVersion import QVersion
+except ImportError:
+    try: # Next try from current directory
+        from QHeader import QHeader
+        from QData import QData
+        from QHexCodes import QHexCodes
+        from QVersion import QVersion
+    except ImportError:
+        raise
 
 class QReduce:
+    """
+    Reduce Q-file size by pruning channels, spectra, and config fields.
+
+    This class creates a reduced version of a Q-file containing only
+    specified channels, spectra, and configuration parameters. Useful
+    for reducing file size when only certain measurements are needed.
+
+    The reduced file uses v1.3 format regardless of input version.
+    """
     __name2ident = {}
 
-    def __init__(self, filename:str, config:dict) -> None:
+    def __init__(self, filename: str, config: dict) -> None:
         self.filename = filename
 
         channelIdents = self.__updateName2Ident(config, "channels") # Get intersecting idents
@@ -94,29 +106,29 @@ class QReduce:
         return ", ".join(msgs)
 
     @classmethod
-    def loadConfig(cls, filename:str) -> dict:
+    def loadConfig(cls, filename: str) -> dict | None:
         if os.path.isfile(filename):
             try:
                 with open(filename, "r") as fp:
                     config = json.load(fp)
                     if not isinstance(config, dict):
-                        logging.error("%s config %s is not a dictionary", filename, config)
+                        logging.error(f"{filename} config {config} is not a dictionary")
                         return None
                     for key in ["config", "channels", "spectra"]:
                         if key not in config:
-                            logging.error("%s is not in %s, %s", key, filename, config)
+                            logging.error(f"{key} is not in {filename}, {config}")
                             return None
                     cls.__updateName2Ident(config, "channels")
                     cls.__updateName2Ident(config, "spectra")
                     return config
-            except:
-                logging.exception("Loading %s", filename)
+            except Exception:
+                logging.exception(f"Loading {filename}")
                 return None
         else:
             return None
 
     @staticmethod
-    def __spectraIndices(hdr:QHeader, indices:np.ndarray) -> np.ndarray:
+    def __spectraIndices(hdr: QHeader, indices: np.ndarray) -> np.ndarray:
         Nc = hdr.Nc # Number of channels
         Nf = hdr.Nf # Number of frequencies
         indices = indices.reshape(-1, 1)
@@ -125,7 +137,7 @@ class QReduce:
         return indices.flatten()
 
     @staticmethod
-    def __findIndices(idents:np.ndarray, known:np.ndarray) -> tuple:
+    def __findIndices(idents: np.ndarray, known: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         if idents is None: return (np.array([], dtype=int), np.array([], dtype=int))
 
         (idents, iLHS, iRHS) = np.intersect1d(idents, known, return_indices=True)
@@ -133,7 +145,7 @@ class QReduce:
         return (idents[ix], iRHS[ix])
 
     @classmethod
-    def __updateName2Ident(cls, config:dict, key:str) -> list:
+    def __updateName2Ident(cls, config: dict, key: str) -> np.ndarray | None:
         if not isinstance(config, dict): return None
         if key not in config or not isinstance(config[key], list): 
             return None
@@ -144,15 +156,15 @@ class QReduce:
                 ident = cls.__name2ident[name]
             else:
                 ident = QHexCodes.name2ident(name)
-                if ident is None:
-                    logging.warning("Unknown name(%s) to ident(%s)", key, name)
                 cls.__name2ident[name] = ident
+                if ident is None:
+                    logging.warning(f"Unknown name({key}) to ident({name})")
             if ident is not None:
                 idents.append(ident)
 
         return np.array(idents, dtype="uint16")
 
-    def __reduceRecord(self, buffer:bytes) -> bytes:
+    def __reduceRecord(self, buffer: bytes) -> bytes | None:
         if len(buffer) != self.dataSizeOrig: return None
 
         record = buffer[:2] + buffer[12:14] # Ident + stime
@@ -162,6 +174,15 @@ class QReduce:
         return record
 
     def reduceFile(self, ofp) -> int:
+        """
+        Write reduced Q-file to output file pointer.
+
+        Args:
+            ofp: Output file pointer opened in binary write mode
+
+        Returns:
+            Total bytes written
+        """
         with open(self.filename, "rb") as ifp:
             ifp.seek(self.hdrSizeOrig) # Skip the header
             totSize = ofp.write(self.__header)
@@ -173,7 +194,17 @@ class QReduce:
                     totSize += ofp.write(record)
             return totSize
 
-    def decimate(self, ofp, indices:np.array) -> int:
+    def decimate(self, ofp, indices: np.ndarray) -> int:
+        """
+        Write decimated Q-file records to output file pointer.
+
+        Args:
+            ofp: Output file pointer opened in binary write mode
+            indices: Array of record indices to include
+
+        Returns:
+            Total bytes written
+        """
         with open(self.filename, "rb") as ifp:
             ifp.seek(self.hdrSizeOrig) # Skip the header
             totSize = ofp.write(self.__header)
@@ -185,13 +216,15 @@ class QReduce:
                     totSize += ofp.write(record)
             return totSize
 
-def __chkExists(filename:str) -> str:
+def __chkExists(filename: str) -> str:
+    """Validate that file exists for argparse."""
     from argparse import ArgumentTypeError
 
     if os.path.isfile(filename): return filename
-    raise argparse.ArgumentTypeError(f"{filename} does not exist")
+    raise ArgumentTypeError(f"{filename} does not exist")
 
-def main():
+def main() -> None:
+    """Command-line interface for QReduce."""
     from argparse import ArgumentParser
 
     parser = ArgumentParser(description="Reduce the size of a Q-file")
@@ -207,7 +240,7 @@ def main():
 
     qrConfig = QReduce.loadConfig(args.config) # Do this once per file
     qr = QReduce(args.filename, qrConfig)
-    logging.info("QR %s", qr)
+    logging.info(f"QR {qr}")
 
     if args.output:
         args.output = os.path.abspath(os.path.expanduser(args.output))

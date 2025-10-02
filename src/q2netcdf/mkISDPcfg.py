@@ -6,88 +6,136 @@
 
 from argparse import ArgumentTypeError
 
-def chkNotNegative(val:float) -> float:
+def chkNotNegative(val: float) -> float:
+    """
+    Validate that argument is non-negative number.
+
+    Args:
+        val: Value to validate
+
+    Returns:
+        Validated float value
+
+    Raises:
+        ArgumentTypeError: If value is negative or not numeric
+    """
     try:
         val = float(val)
         if val >= 0: return val
         msg = ArgumentTypeError(f"{val} is < 0")
-    except:
+    except (ValueError, TypeError):
         msg = ArgumentTypeError(f"{val} is not numeric")
     raise msg
 
-def chkPositive(val:float) -> float:
+def chkPositive(val: float) -> float:
+    """
+    Validate that argument is positive number.
+
+    Args:
+        val: Value to validate
+
+    Returns:
+        Validated float value
+
+    Raises:
+        ArgumentTypeError: If value is not positive or not numeric
+    """
     try:
         val = float(val)
         if val > 0: return val
         msg = ArgumentTypeError(f"{val} is <= 0")
-    except:
+    except (ValueError, TypeError):
         msg = ArgumentTypeError(f"{val} is not numeric")
-    return msg
+    raise msg
 
-def chkDespiking(val:str) -> tuple:
+def chkDespiking(val: str) -> tuple[float, float, int]:
+    """
+    Parse and validate despiking parameters.
+
+    Args:
+        val: Comma-separated string "threshold,smoothing,npoints"
+
+    Returns:
+        Tuple of (threshold, smoothing, number_of_points)
+
+    Raises:
+        ArgumentTypeError: If format is invalid or values are not numeric
+    """
     fields = val.split(",")
     if len(fields) != 3:
         raise ArgumentTypeError(f"{val} is does not have three fields")
     val = []
-    msg = None
     try:
         val.append(float(fields[0])) # Threshold
-    except:
-        msg = f"{fields[0]} threshold is not numeric in {fields}"
-    if msg is not None: raise ArgumentTypeError(msg)
+    except (ValueError, TypeError):
+        raise ArgumentTypeError(f"{fields[0]} threshold is not numeric in {fields}")
 
     try:
         val.append(float(fields[1])) # smoothing
-    except:
-        msg = f"{fields[1]} smoothing is not numeric in {fields}"
-    if msg is not None: raise ArgumentTypeError(msg)
+    except (ValueError, TypeError):
+        raise ArgumentTypeError(f"{fields[1]} smoothing is not numeric in {fields}")
 
     try:
         val.append(int(fields[2])) # number of points to remove
-    except:
-        msg = f"{fields[2]} number of points is not an integer in {fields}"
-    if msg is not None: raise ArgumentTypeError(msg)
+    except (ValueError, TypeError):
+        raise ArgumentTypeError(f"{fields[2]} number of points is not an integer in {fields}")
 
     return val
 
-def main ():
+def main() -> None:
+    """Command-line interface for mkISDPcfg."""
     from argparse import ArgumentParser
     from datetime import datetime, timezone
     import os.path
 
-    parser = ArgumentParser(description="Generate isdp.cfg for Rockland's MicroRider")
-    parser.add_argument("--isdpConfig", type=str, default="/home/debian/data/isdp.cfg",
-                        help="Filename of output config file")
+    parser = ArgumentParser(
+        description="Generate isdp.cfg for Rockland's MicroRider"
+    )
+    parser.add_argument(
+        "--isdpConfig",
+        type=str,
+        default="/home/debian/data/isdp.cfg",
+        help="Filename of output config file",
+    )
 
     grp = parser.add_argument_group(description="Platform speed related options")
     grp.add_argument("--instrument", type=str, 
                      choices=("vmp", "sea_explorer", "slocum_glider"),
                      default="slocum_glider",
                      help="Instrument platform, vmp, sea_explorer, slocum_glider")
-    grp.add_argument("--tau", type=chkPositive, 
-                     help="Smoothing value for pressure record to compute speed in seconds,"
-                     + " default is 3 seconds")
+    grp.add_argument(
+        "--tau",
+        type=chkPositive,
+        help="Smoothing value for pressure record to compute speed in seconds,"
+        + " default is 3 seconds",
+    )
     grp.add_argument("--aoa", type=chkPositive,
                      help="Angle-of-attack of glider in degrees, default is 3 degrees")
     grp.add_argument("--algorithm", type=str, choices=("glide",),
                      help="Algorithm for calculating instrument speed")
 
     grp = parser.add_argument_group(description="Spectra computation parameters")
-    parser.add_argument("--fft_length", type=chkPositive,
-                        help="Length of data segments used to compute individual FFTs in seconds,"
-                        + " default is 4")
-    grp.add_argument("--diss_length", type=chkPositive, 
-                     help="Length of to calculate dissipation over in seconds, default is 30")
+    parser.add_argument(
+        "--fft_length",
+        type=chkPositive,
+        help="Length of data segments used to compute individual FFTs in seconds,"
+        + " default is 4",
+    )
+    grp.add_argument(
+        "--diss_length",
+        type=chkPositive,
+        help="Length of to calculate dissipation over in seconds, default is 30",
+    )
     grp.add_argument("--overlap", type=chkNotNegative,
-                     help="Overlatp between dissipation estimates in seconds, default is 0")
+                     help="Overlap between dissipation estimates in seconds, default is 0")
     grp.add_argument("--hp_cut", type=chkPositive,
                      help="High-pass cut-off frequency in Hz, default is 0.125."
                      + "This should be 1/(2*fft_length")
     grp.add_argument("--shear_despiking", type=chkDespiking,
-                     help="Shear despiking paramters,"
+                     help="Shear despiking parameters,"
                      + " threshold, smoothing, number of points to remove")
     grp.add_argument("--ucond_despiking", type=chkDespiking,
-                     help="Micro-conductivity despiking paramters,"
+                     help="Micro-conductivity despiking parameters,"
                      + " threshold, smoothing, number of points to remove")
     grp.add_argument("--order", type=int, choices=(0,1,2,3),
                      help="Polynomial order for detrending data, default is 1")
@@ -105,7 +153,7 @@ def main ():
                      help="Threshold [epsilon | W m^3] to use the inertial subrange routine"
                      + " to compute dissipation estimates")
     grp.add_argument("--fit_order", type=int, choices=(0,1,2,3),
-                     help="Order of polynomial fit used to identify minimas of the spectra")
+                     help="Order of polynomial fit used to identify minima of the spectra")
 
     grp = parser.add_argument_group(description="Output data parameters")
     grp.add_argument("--num_frequency", type=chkNotNegative,

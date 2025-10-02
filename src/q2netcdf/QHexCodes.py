@@ -8,6 +8,21 @@ import logging
 import re
 
 class QHexCodes:
+    """
+    Mapping between Q-file hex identifiers and sensor/spectra names.
+
+    Q-files use hexadecimal identifiers to label channels (scalar measurements)
+    and spectra (frequency-domain data). This class provides bidirectional
+    mapping between identifiers and human-readable names with attributes.
+
+    The identifier scheme uses:
+    - Upper 12 bits (0xFFF0): Sensor/spectra type
+    - Lower 4 bits (0x000F): Instance number (0-15)
+
+    Example:
+        0x610 -> "sh_1" (shear probe #1)
+        0x611 -> "sh_2" (shear probe #2)
+    """
     __hexMap = {
             0x010: ["dT_",
                     {
@@ -114,7 +129,7 @@ class QHexCodes:
                             "velocity_eastward",
                             "velocity_northward",
                             "velocity_upwards",
-                            "velocity_squard",
+                            "velocity_squared",
                             ],
                          "units": [
                              "meters/second",
@@ -207,7 +222,7 @@ class QHexCodes:
                     ],
             0x530: ["DO",
                     {
-                        "long_name": "disolved_oxygen",
+                        "long_name": "dissolved_oxygen",
                         },
                     ],
             0x610: ["sh_",
@@ -232,7 +247,7 @@ class QHexCodes:
                         "units": "Celsius/meter",
                         },
                     ],
-            0x640: ["dC_",
+            0x650: ["dC_",
                     {
                         "long_name": "gradient_conductivity_",
                         },
@@ -399,7 +414,7 @@ class QHexCodes:
         return "\n".join(msg)
 
     @staticmethod
-    def __fixName(name:str, cnt:int) -> str:
+    def __fixName(name: str | list | tuple, cnt: int) -> str:
         if isinstance(name, str):
             if not name.endswith("_"): return name
             cnt = cnt # 0-15 -> 1-16
@@ -412,7 +427,7 @@ class QHexCodes:
         raise NotImplementedError(f"Unsupported name type, {type(name)} <- {name}")
 
     @classmethod
-    def __findIdent(cls, ident:int) -> tuple:
+    def __findIdent(cls, ident: int) -> tuple[list | None, int | None]:
         key = ident & 0xfff0
         cnt = ident & 0x0f
         if key in cls.__hexMap:
@@ -422,7 +437,16 @@ class QHexCodes:
         return (None, None)
 
     @classmethod
-    def name(cls, ident:int) -> str:
+    def name(cls, ident: int) -> str | None:
+        """
+        Get the name for a given identifier.
+
+        Args:
+            ident: Hexadecimal identifier (e.g., 0x610)
+
+        Returns:
+            Human-readable name (e.g., "sh_0") or None if not found
+        """
         (item, cnt) = cls.__findIdent(ident)
         if item is None: return None
 
@@ -430,7 +454,16 @@ class QHexCodes:
         return cls.__fixName(name, cnt)
 
     @classmethod
-    def attributes(cls, ident:int) -> dict:
+    def attributes(cls, ident: int) -> dict | None:
+        """
+        Get the metadata attributes for a given identifier.
+
+        Args:
+            ident: Hexadecimal identifier
+
+        Returns:
+            Dictionary with long_name, units, etc., or None if not found
+        """
         (item, cnt) = cls.__findIdent(ident)
         if item is None: return None
 
@@ -442,7 +475,16 @@ class QHexCodes:
         return attrs
 
     @classmethod
-    def name2ident(cls, name:str) -> int:
+    def name2ident(cls, name: str) -> int | None:
+        """
+        Convert a name to its hexadecimal identifier (reverse lookup).
+
+        Args:
+            name: Human-readable name (e.g., "sh_1")
+
+        Returns:
+            Hexadecimal identifier (e.g., 0x611) or None if not found
+        """
         matches = re.match(r"^(.*_)(\d+)$", name)
         if matches:
             prefix = matches[1]
@@ -454,34 +496,41 @@ class QHexCodes:
         for ident in cls.__hexMap:
             if cls.__hexMap[ident][0] == prefix:
                 return ident + cnt
-        logging.warning("%s not found in hexMap", name)
+        logging.warning(f"{name} not found in hexMap")
         return None
 
 
-def main():
+def main() -> None:
+    """Command-line interface for QHexCodes."""
     from argparse import ArgumentParser
 
     parser = ArgumentParser()
     parser.add_argument("ident", type=str, nargs="*", help="hex ident(s) to look up")
     parser.add_argument("--name", type=str, action="append", help="Name to translate to ident")
+    parser.add_argument(
+        "--logLevel",
+        type=str,
+        default="INFO",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        help="Logging level",
+    )
     args = parser.parse_args()
 
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=getattr(logging, args.logLevel))
 
     if args.name:
         for name in args.name:
             ident = QHexCodes.name2ident(name)
-            logging.info(f"%s -> {ident:#06x}", name)
+            logging.info(f"{name} -> {ident:#06x}")
 
     hexMap = QHexCodes()
 
     if args.ident:
         for ident in args.ident:
             ident = int(ident, 16)
-            logging.info(f"ident {ident:#04x} %s -> %s",
-                         hexMap.name(ident), hexMap.attributes(ident))
+            logging.info(f"ident {ident:#04x} {hexMap.name(ident)} -> {hexMap.attributes(ident)}")
     elif not args.name:
-        logging.info("Hex Map\n%s", hexMap)
+        logging.info(f"Hex Map\n{hexMap}")
 
 if __name__ == "__main__":
     main()

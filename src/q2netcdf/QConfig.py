@@ -6,13 +6,32 @@
 import re
 import numpy as np
 import json
-try:
-    from QVersion import QVersion
-except:
-    from q2netcdf.QVersion import QVersion
+try: # First try from parent directory
+    from .QVersion import QVersion
+except ImportError:
+    try: # Then try from local directory
+        from QVersion import QVersion
+    except ImportError:
+        raise
 
 class QConfig:
-    def __init__(self, config:str, version:QVersion) -> None:
+    """
+    Parser for Q-file configuration records.
+
+    Configuration records contain key-value pairs with various data types
+    including integers, floats, strings, booleans, and arrays.
+    """
+
+    # Cached compiled regex patterns for performance (class-level constants)
+    _PATTERN_ARRAY = re.compile(r"^\[(.*)\]$")
+    _PATTERN_INT = re.compile(r"^[+-]?\d+$")
+    _PATTERN_FLOAT = re.compile(r"^[+-]?\d+[.]\d*(|[Ee][+-]?\d+)$")
+    _PATTERN_STRING = re.compile(r'^"(.*)"$')
+    _PATTERN_TRUE = re.compile(r"^true$")
+    _PATTERN_FALSE = re.compile(r"^false$")
+    _PATTERN_V12_LINE = re.compile(r"^\"(.*)\"\s*=>\s*(.*)$")
+
+    def __init__(self, config: str, version: QVersion) -> None:
         self.__config = config
         self.__version = version
         self.__dict = None
@@ -24,27 +43,32 @@ class QConfig:
             msg.append(f"{key} -> {config[key]}")
         return "\n".join(msg)
 
-    def __parseValue(self, val:str):
-        matches = re.match(r"^\[(.*)\]$", val)
+    def __parseValue(self, val: str) -> int | float | str | bool | np.ndarray:
+        # Use cached compiled patterns for better performance
+        matches = self._PATTERN_ARRAY.match(val)
         if matches:
+            # Handle empty arrays
+            content = matches[1].strip()
+            if not content:
+                return np.array([])
             fields = []
-            for field in matches[1].split(","):
+            for field in content.split(","):
                 fields.append(self.__parseValue(field.strip()))
             return np.array(fields)
 
-        matches = re.match(r"^[+-]?\d+$", val)
+        matches = self._PATTERN_INT.match(val)
         if matches: return int(val)
 
-        matches = re.match(r"^[+-]?\d+[.]\d*(|[Ee][+-]?\d+)$", val)
+        matches = self._PATTERN_FLOAT.match(val)
         if matches: return float(val)
 
-        matches = re.match(r'^"(.*)"$', val)
+        matches = self._PATTERN_STRING.match(val)
         if matches: return matches[1]
 
-        matches = re.match(r"^true$", val)
+        matches = self._PATTERN_TRUE.match(val)
         if matches: return True
 
-        matches = re.match(r"^false$", val)
+        matches = self._PATTERN_FALSE.match(val)
         if matches: return False
 
         return val
@@ -54,10 +78,10 @@ class QConfig:
         for line in self.__config.split(b"\n"):
             try:
                 line = str(line, "utf-8").strip()
-                matches = re.match(r'^"(.*)" => (.*)$', line)
+                matches = self._PATTERN_V12_LINE.match(line)
                 if matches:
                     self.__dict[matches[1]] = self.__parseValue(matches[2])
-            except:
+            except (UnicodeDecodeError, ValueError):
                 pass
 
     def __splitConfigv13(self) -> None:

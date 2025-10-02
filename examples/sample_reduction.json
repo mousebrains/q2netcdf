@@ -1,0 +1,19 @@
+{
+  "channels": [
+    "sh_0",
+    "sh_1",
+    "T_0",
+    "P"
+  ],
+  "spectra": [
+    "sh_0",
+    "sh_1"
+  ],
+  "config": [
+    "fft_length",
+    "diss_length",
+    "f_aa",
+    "instrument",
+    "algorithm"
+  ]
+}
