@@ -6,13 +6,7 @@
 import re
 import numpy as np
 import json
-try: # First try from parent directory
-    from .QVersion import QVersion
-except ImportError:
-    try: # Then try from local directory
-        from QVersion import QVersion
-    except ImportError:
-        raise
+from .QVersion import QVersion
 
 class QConfig:
     """
@@ -31,10 +25,10 @@ class QConfig:
     _PATTERN_FALSE = re.compile(r"^false$")
     _PATTERN_V12_LINE = re.compile(r"^\"(.*)\"\s*=>\s*(.*)$")
 
-    def __init__(self, config: str, version: QVersion) -> None:
+    def __init__(self, config: bytes, version: QVersion) -> None:
         self.__config = config
         self.__version = version
-        self.__dict = None
+        self.__dict: dict | None = None
 
     def __repr__(self) -> str:
         config = self.config()
@@ -82,8 +76,8 @@ class QConfig:
         self.__dict = dict()
         for line in self.__config.split(b"\n"):
             try:
-                line = str(line, "utf-8").strip()
-                matches = self._PATTERN_V12_LINE.match(line)
+                line_str = line.decode("utf-8").strip()
+                matches = self._PATTERN_V12_LINE.match(line_str)
                 if matches:
                     self.__dict[matches[1]] = self.__parseValue(matches[2])
             except (UnicodeDecodeError, ValueError):
@@ -98,7 +92,7 @@ class QConfig:
     def size(self) -> int:
         return len(self)
 
-    def raw(self) -> str:
+    def raw(self) -> bytes:
         return self.__config
 
     def config(self) -> dict:
@@ -107,4 +101,5 @@ class QConfig:
                 self.__splitConfigV12()
             else:
                 self.__splitConfigv13()
+        assert self.__dict is not None  # After split methods, dict is populated
         return self.__dict

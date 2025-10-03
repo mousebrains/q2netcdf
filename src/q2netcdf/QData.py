@@ -7,17 +7,10 @@
 import struct
 import numpy as np
 import logging
-try: # First try from parent directory
-    from .QHeader import QHeader
-    from .QHexCodes import QHexCodes
-    from .QRecordType import RecordType
-except ImportError:
-    try: # Next try from current directory
-        from QHeader import QHeader
-        from QHexCodes import QHexCodes
-        from QRecordType import RecordType
-    except ImportError:
-        raise
+from typing import Any
+from .QHeader import QHeader
+from .QHexCodes import QHexCodes
+from .QRecordType import RecordType
 
 class QRecord:
     """
@@ -65,21 +58,21 @@ class QRecord:
 
     def split(self, hdr:QHeader) -> tuple:
         hexMap = QHexCodes()
-        record = {}
-        attrs = {}
+        record: dict[str, Any] = {}
+        attrs: dict[str, Any] = {}
 
         record["time"] = self.t0
-        attrs["time"] = dict(long_name="time")
+        attrs["time"] = {"long_name": "time"}
 
         if self.t1 is not None:
             record["t1"] = self.t1
-            attrs["t1"] = dict(long_name="timeStop")
+            attrs["t1"] = {"long_name": "timeStop"}
         if self.number is not None:
             record["record"] = self.number
-            attrs["record"] = dict(long_name="recordNumber")
+            attrs["record"] = {"long_name": "recordNumber"}
         if self.error is not None:
             record["error"] = self.error
-            attrs["error"] = dict(long_name="errorCode")
+            attrs["error"] = {"long_name": "errorCode"}
 
         for index in range(hdr.Nc):
             ident = hdr.channels[index]
@@ -137,6 +130,7 @@ class QData:
 
     def __init__(self, hdr:QHeader) -> None:
         self.__hdr = hdr
+        assert hdr.version is not None  # Version is always set in QHeader.__init__
         if hdr.version.isV12():
             self.__format = "<HHqee" + ("e" * hdr.Nc) + ("e" * hdr.Ns * hdr.Nf)
         else: # >v12
@@ -159,6 +153,7 @@ class QData:
             return None  # EOF while reading
 
         items = struct.unpack(self.__format, buffer)
+        assert hdr.version is not None  # Version is always set
         if hdr.version.isV12():
             offset = 5
             (ident, number, err, stime, etime) = items[:offset]
@@ -172,7 +167,7 @@ class QData:
         if ident != RecordType.DATA.value:
             logging.warning(f"Data record identifier mismatch, {ident:#06x} != {RecordType.DATA.value:#06x} at byte {fp.tell() - len(buffer)} in {self.__hdr.filename}")
 
-        record = QRecord(hdr, number, err, stime, etime, items[offset:])
+        record = QRecord(hdr, number, err, stime, etime, list(items[offset:]))
         return record
 
     def prettyRecord(self, record:QRecord) -> str:

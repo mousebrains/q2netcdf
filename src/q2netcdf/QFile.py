@@ -6,16 +6,9 @@
 
 import os.path
 import logging
-from typing import Generator
-try: # First try from parent directory
-    from .QHeader import QHeader
-    from .QData import QData, QRecord
-except ImportError:
-    try: # Then try from local directory
-        from QHeader import QHeader
-        from QData import QData, QRecord
-    except ImportError:
-        raise
+from typing import Generator, Any
+from .QHeader import QHeader
+from .QData import QData, QRecord
 
 class QFile:
     """
@@ -46,7 +39,7 @@ class QFile:
         """
         self.__fn = os.path.abspath(os.path.expanduser(fn))
         self.__fp = None
-        self.__data = None
+        self.__data: QData | None = None
 
         if not os.path.isfile(self.__fn):
             raise FileNotFoundError(f"{self.__fn} does not exist")
@@ -117,7 +110,7 @@ class QFile:
         """
         return self.__data.prettyRecord(record) if self.__data else None
 
-    def validate(self) -> dict:
+    def validate(self) -> dict[str, Any]:
         """
         Validate Q-file integrity and return diagnostic information.
 
@@ -132,7 +125,7 @@ class QFile:
         """
         from .QHexCodes import QHexCodes
 
-        results = {
+        results: dict[str, Any] = {
             "valid": True,
             "version": None,
             "records_readable": 0,

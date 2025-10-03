@@ -6,12 +6,12 @@
 
 from argparse import ArgumentTypeError
 
-def chkNotNegative(val: float) -> float:
+def chkNotNegative(val: str) -> float:
     """
     Validate that argument is non-negative number.
 
     Args:
-        val: Value to validate
+        val: Value to validate (string from command line)
 
     Returns:
         Validated float value
@@ -20,20 +20,20 @@ def chkNotNegative(val: float) -> float:
         ArgumentTypeError: If value is negative or not numeric
     """
     try:
-        val = float(val)
-        if val >= 0:
-            return val
+        fval = float(val)
+        if fval >= 0:
+            return fval
         msg = ArgumentTypeError(f"{val} is < 0")
     except (ValueError, TypeError):
         msg = ArgumentTypeError(f"{val} is not numeric")
     raise msg
 
-def chkPositive(val: float) -> float:
+def chkPositive(val: str) -> float:
     """
     Validate that argument is positive number.
 
     Args:
-        val: Value to validate
+        val: Value to validate (string from command line)
 
     Returns:
         Validated float value
@@ -42,9 +42,9 @@ def chkPositive(val: float) -> float:
         ArgumentTypeError: If value is not positive or not numeric
     """
     try:
-        val = float(val)
-        if val > 0:
-            return val
+        fval = float(val)
+        if fval > 0:
+            return fval
         msg = ArgumentTypeError(f"{val} is <= 0")
     except (ValueError, TypeError):
         msg = ArgumentTypeError(f"{val} is not numeric")
@@ -66,23 +66,23 @@ def chkDespiking(val: str) -> tuple[float, float, int]:
     fields = val.split(",")
     if len(fields) != 3:
         raise ArgumentTypeError(f"{val} is does not have three fields")
-    val = []
+
     try:
-        val.append(float(fields[0])) # Threshold
+        threshold = float(fields[0])
     except (ValueError, TypeError):
         raise ArgumentTypeError(f"{fields[0]} threshold is not numeric in {fields}")
 
     try:
-        val.append(float(fields[1])) # smoothing
+        smoothing = float(fields[1])
     except (ValueError, TypeError):
         raise ArgumentTypeError(f"{fields[1]} smoothing is not numeric in {fields}")
 
     try:
-        val.append(int(fields[2])) # number of points to remove
+        npoints = int(fields[2])
     except (ValueError, TypeError):
         raise ArgumentTypeError(f"{fields[2]} number of points is not an integer in {fields}")
 
-    return val
+    return (threshold, smoothing, npoints)
 
 def main() -> None:
     """Command-line interface for mkISDPcfg."""

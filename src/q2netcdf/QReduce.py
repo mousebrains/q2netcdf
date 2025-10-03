@@ -13,17 +13,11 @@ import logging
 import struct
 import os
 import numpy as np
-try: # First try from parent directory
-    from .QHeader import QHeader
-    from .QHexCodes import QHexCodes
-    from .QVersion import QVersion
-except ImportError:
-    try: # Next try from current directory
-        from QHeader import QHeader
-        from QHexCodes import QHexCodes
-        from QVersion import QVersion
-    except ImportError:
-        raise
+from typing import Any
+from .QHeader import QHeader
+from .QHexCodes import QHexCodes
+from .QVersion import QVersion
+from .QRecordType import RecordType
 
 class QReduce:
     """
@@ -35,7 +29,7 @@ class QReduce:
 
     The reduced file uses v1.3 format regardless of input version.
     """
-    __name2ident = {}
+    __name2ident: dict[str, int] = {}
 
     def __init__(self, filename: str, config: dict) -> None:
         self.filename = filename
@@ -43,12 +37,16 @@ class QReduce:
         channelIdents = self.__updateName2Ident(config, "channels") # Get intersecting idents
         spectraIdents = self.__updateName2Ident(config, "spectra")
 
-        with open(filename, "rb") as fp: 
+        with open(filename, "rb") as fp:
             hdr = QHeader(fp, filename)
             self.fileSizeOrig = os.fstat(fp.fileno()).st_size
 
-        (channelIdents, channelIndices) = self.__findIndices(channelIdents, hdr.channels)
-        (spectraIdents, spectraIndices) = self.__findIndices(spectraIdents, hdr.spectra)
+        # Convert tuples to ndarrays for processing
+        channelArray = np.array(hdr.channels, dtype="uint16")
+        spectraArray = np.array(hdr.spectra, dtype="uint16")
+
+        (channelIdents, channelIndices) = self.__findIndices(channelIdents, channelArray)
+        (spectraIdents, spectraIndices) = self.__findIndices(spectraIdents, spectraArray)
 
         qFreq = spectraIndices.size != 0
         if qFreq: # Some spectra, so build full indices
@@ -57,7 +55,7 @@ class QReduce:
         else:
             allIndices = channelIndices
 
-        body = struct.pack("<Hf", QHeader.headerIdent, QVersion.v13.value)
+        body = struct.pack("<Hf", RecordType.HEADER.value, QVersion.v13.value)
         body += np.array(hdr.dtBinary, dtype="uint64").tobytes()
         body += struct.pack("<HHH", 
                             len(channelIdents), 
@@ -68,19 +66,21 @@ class QReduce:
             body += spectraIdents.astype("<u2").tobytes()
             body += np.array(hdr.frequencies).astype("<f2").tobytes()
 
-        myConfig = {}
+        myConfig: dict[str, Any] = {}
         if isinstance(config, dict) and "config" in config:
             hdrConfig = hdr.config.config()
             for name in config["config"]:
                 if name in hdrConfig:
                     myConfig[name] = hdrConfig[name]
-        if myConfig:
-            myConfig = json.dumps(myConfig, separators=(",", ":"))
-        else:
-            myConfig = ""
 
-        body += struct.pack("<H", len(myConfig))
-        body += myConfig.encode("utf-8")
+        myConfigStr: str
+        if myConfig:
+            myConfigStr = json.dumps(myConfig, separators=(",", ":"))
+        else:
+            myConfigStr = ""
+
+        body += struct.pack("<H", len(myConfigStr))
+        body += myConfigStr.encode("utf-8")
 
         self.dataSize = 4 + 2 * allIndices.size
         body += struct.pack("<H", self.dataSize)
@@ -134,7 +134,7 @@ class QReduce:
         return indices.flatten()
 
     @staticmethod
-    def __findIndices(idents: np.ndarray, known: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    def __findIndices(idents: np.ndarray | None, known: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         if idents is None:
             return (np.array([], dtype=int), np.array([], dtype=int))
 
@@ -151,13 +151,15 @@ class QReduce:
 
         idents = []
         for name in config[key]:
-            if name in cls.__name2ident: 
+            ident: int | None
+            if name in cls.__name2ident:
                 ident = cls.__name2ident[name]
             else:
                 ident = QHexCodes.name2ident(name)
-                cls.__name2ident[name] = ident
                 if ident is None:
                     logging.warning(f"Unknown name({key}) to ident({name})")
+                else:
+                    cls.__name2ident[name] = ident
             if ident is not None:
                 idents.append(ident)
 
@@ -241,6 +243,9 @@ def main() -> None:
     args.filename = os.path.abspath(os.path.expanduser(args.filename))
 
     qrConfig = QReduce.loadConfig(args.config) # Do this once per file
+    if qrConfig is None:
+        logging.error(f"Failed to load config from {args.config}")
+        return
     qr = QReduce(args.filename, qrConfig)
     logging.info(f"QR {qr}")
 

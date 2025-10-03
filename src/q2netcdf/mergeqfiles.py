@@ -21,22 +21,15 @@
 # Feb-2025, Pat Welch, pat@mousebrains.com, update module usage
 # Mar-2025, Pat Welch, pat@mousebrains.com, Reduce Q-file contents
 
-from argparse import ArgumentParser
+from argparse import ArgumentParser, Namespace
 import os
 import sys
 import time
 import numpy as np
 import logging
 import math
-try: # First try from parent directory
-    from .QHeader import QHeader
-    from .QReduce import QReduce
-except ImportError:
-    try: # Then try from current directory
-        from QHeader import QHeader
-        from QReduce import QReduce
-    except ImportError:
-        raise
+from .QHeader import QHeader
+from .QReduce import QReduce
 
 def reduceAndDecimate(info: dict, ofp, ofn: str, maxSize: int) -> int:
     """
@@ -231,7 +224,7 @@ def glueFiles(filenames: list[str], ofn: str, bufferSize: int = 1024*1024) -> in
         logging.exception("Unable to glue %s to %s", filenames, ofn)
         return 0
 
-def fileCandidates(args: ArgumentParser, times: np.ndarray) -> tuple[dict, int]:
+def fileCandidates(args: Namespace, times: np.ndarray) -> tuple[dict, int]:
     """
     Find Q-file candidates within time range.
 
@@ -264,7 +257,7 @@ def fileCandidates(args: ArgumentParser, times: np.ndarray) -> tuple[dict, int]:
                 totSize += st.st_size
         return (qFiles, totSize)
 
-def scanDirectory(args: ArgumentParser, times: np.ndarray) -> int:
+def scanDirectory(args: Namespace, times: np.ndarray) -> int:
     """
     Scan directory for Q-files and merge/reduce them.
 

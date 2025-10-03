@@ -13,15 +13,9 @@ import xarray as xr
 import logging
 import sys
 import struct
-try: # First try parent directory
-    from .QHeader import QHeader
-    from .QData import QData
-except ImportError:
-    try: # Then try local directory
-        from QHeader import QHeader
-        from QData import QData
-    except ImportError:
-        raise
+from typing import Any
+from .QHeader import QHeader
+from .QData import QData
 
 def loadQfile(fn:str) -> xr.Dataset | None:
     """
@@ -35,9 +29,10 @@ def loadQfile(fn:str) -> xr.Dataset | None:
         and spectra, or None if file is invalid/empty
     """
     records = []
-    hdr = None
+    hdr: QHeader | None = None
+    data: QData | None = None
+
     with open(fn, "rb") as fp:
-        data = None
         while True:
             if QHeader.chkIdent(fp):
                 hdr = QHeader(fp, fn)
@@ -45,6 +40,9 @@ def loadQfile(fn:str) -> xr.Dataset | None:
                     break # EOF
                 data = QData(hdr)
             elif QData.chkIdent(fp):
+                assert data is not None, "Data cannot be read before header"
+                assert hdr is not None, "Header must exist before data"
+
                 record = data.load(fp)
                 if record is None:
                     break # EOF
@@ -52,7 +50,7 @@ def loadQfile(fn:str) -> xr.Dataset | None:
                 qFreq = False
                 t0 = record["time"]
                 del record["time"]
-                values = {}
+                values: dict[str, Any] = {}
                 qFreq = False
                 for key in record:
                     val = record[key]
@@ -67,9 +65,9 @@ def loadQfile(fn:str) -> xr.Dataset | None:
                                        val.reshape(1,-1),
                                        attrs[key] if key in attrs else None,
                                        )
-                coords = dict(time=[t0])
+                coords: dict = {"time": [t0]}
                 if qFreq:
-                    coords["freq"] = np.array(hdr.frequencies)
+                    coords["freq"] = list(hdr.frequencies)
                 ds = xr.Dataset(data_vars=values, coords=coords)
 
                 records.append(ds)
@@ -94,7 +92,8 @@ def loadQfile(fn:str) -> xr.Dataset | None:
     ftime = ds.time.data.min()
     ds = ds.assign_coords(ftime=[ftime], despike=np.arange(3))
 
-    toAdd = dict(fileversion=("ftime", [hdr.version.value]))
+    assert hdr.version is not None  # Version is always set in QHeader.__init__
+    toAdd: dict[str, Any] = dict(fileversion=("ftime", [hdr.version.value]))
 
     config = hdr.config.config()
     for key in config: 
@@ -104,7 +103,7 @@ def loadQfile(fn:str) -> xr.Dataset | None:
         elif len(val) == 1:
             toAdd[key] = ("ftime", val)
         elif len(val) == 3: # Despiking
-            toAdd[key] = (["ftime", "despike"], val.reshape(1,-1))
+            toAdd[key] = (("ftime", "despike"), val.reshape(1,-1))
 
     ds = ds.assign(toAdd)
 

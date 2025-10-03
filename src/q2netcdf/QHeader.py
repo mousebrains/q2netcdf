@@ -7,18 +7,9 @@
 import struct
 import logging
 import numpy as np
-
-try: # First try from parent directory
-    from .QConfig import QConfig
-    from .QVersion import QVersion
-    from .QRecordType import RecordType
-except ImportError:
-    try: # Next try from local directory
-        from QConfig import QConfig
-        from QVersion import QVersion
-        from QRecordType import RecordType
-    except ImportError:
-        raise
+from .QConfig import QConfig
+from .QVersion import QVersion
+from .QRecordType import RecordType
 
 class QHeader:
     """
@@ -71,8 +62,8 @@ class QHeader:
         self.dtBinary = dt
         self.time = np.datetime64("0000-01-01") + np.timedelta64(dt, "ms")
 
-        self.channels = None
-        self.spectra = None
+        self.channels: tuple[int, ...] = ()
+        self.spectra: tuple[int, ...] = ()
 
         if self.Nc: # Some channel identifiers to read
             sz = self.Nc * 2
@@ -148,13 +139,7 @@ def main() -> None:
     """Command-line interface for QHeader."""
     from argparse import ArgumentParser
     import os.path
-    try: # First try from parent directory
-        from .QHexCodes import QHexCodes
-    except ImportError: # Next try from local directory
-        try:
-            from QHexCodes import QHexCodes
-        except ImportError:
-            raise
+    from .QHexCodes import QHexCodes
 
     parser = ArgumentParser()
     parser.add_argument("filename", type=str, nargs="+", help="Input filename(s)")
