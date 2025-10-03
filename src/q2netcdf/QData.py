@@ -115,12 +115,14 @@ class QRecord:
         for index in range(hdr.Nc):
             ident = hdr.channels[index]
             name = hexMap.name(ident)
-            if not name: name = f"{ident:#06x}"
+            if not name:
+                name = f"{ident:#06x}"
             msg.append(f"Channel[{name}] = {self.channels[index]}")
         for index in range(hdr.Ns):
             ident = hdr.spectra[index]
             name = hexMap.name(ident)
-            if not name: name = f"{ident:#06x}"
+            if not name:
+                name = f"{ident:#06x}"
             msg.append(f"spectra[{name}] = {self.spectra[index,:]}")
 
         return "\n".join(msg)
@@ -144,7 +146,8 @@ class QData:
     def chkIdent(cls, fp) -> bool | None:
         n = 2
         buffer = fp.read(n)
-        if len(buffer) != n: return None
+        if len(buffer) != n:
+            return None
         (ident,) = struct.unpack("<H", buffer)
         fp.seek(-n, 1) # Backup n bytes
         return ident == RecordType.DATA.value

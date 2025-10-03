@@ -15,13 +15,11 @@ import os
 import numpy as np
 try: # First try from parent directory
     from .QHeader import QHeader
-    from .QData import QData
     from .QHexCodes import QHexCodes
     from .QVersion import QVersion
 except ImportError:
     try: # Next try from current directory
         from QHeader import QHeader
-        from QData import QData
         from QHexCodes import QHexCodes
         from QVersion import QVersion
     except ImportError:
@@ -129,7 +127,6 @@ class QReduce:
 
     @staticmethod
     def __spectraIndices(hdr: QHeader, indices: np.ndarray) -> np.ndarray:
-        Nc = hdr.Nc # Number of channels
         Nf = hdr.Nf # Number of frequencies
         indices = indices.reshape(-1, 1)
         freq = np.arange(Nf, dtype="uint16").reshape(1, -1)
@@ -138,7 +135,8 @@ class QReduce:
 
     @staticmethod
     def __findIndices(idents: np.ndarray, known: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-        if idents is None: return (np.array([], dtype=int), np.array([], dtype=int))
+        if idents is None:
+            return (np.array([], dtype=int), np.array([], dtype=int))
 
         (idents, iLHS, iRHS) = np.intersect1d(idents, known, return_indices=True)
         ix = iRHS.argsort()
@@ -146,8 +144,9 @@ class QReduce:
 
     @classmethod
     def __updateName2Ident(cls, config: dict, key: str) -> np.ndarray | None:
-        if not isinstance(config, dict): return None
-        if key not in config or not isinstance(config[key], list): 
+        if not isinstance(config, dict):
+            return None
+        if key not in config or not isinstance(config[key], list):
             return None
 
         idents = []
@@ -165,7 +164,8 @@ class QReduce:
         return np.array(idents, dtype="uint16")
 
     def __reduceRecord(self, buffer: bytes) -> bytes | None:
-        if len(buffer) != self.dataSizeOrig: return None
+        if len(buffer) != self.dataSizeOrig:
+            return None
 
         record = buffer[:2] + buffer[12:14] # Ident + stime
         data = np.frombuffer(buffer, dtype="<f2", offset=16)
@@ -188,7 +188,8 @@ class QReduce:
             totSize = ofp.write(self.__header)
             while True:
                 data = ifp.read(self.dataSizeOrig)
-                if not data: break
+                if not data:
+                    break
                 record = self.__reduceRecord(data)
                 if record is not None:
                     totSize += ofp.write(record)
@@ -220,7 +221,8 @@ def __chkExists(filename: str) -> str:
     """Validate that file exists for argparse."""
     from argparse import ArgumentTypeError
 
-    if os.path.isfile(filename): return filename
+    if os.path.isfile(filename):
+        return filename
     raise ArgumentTypeError(f"{filename} does not exist")
 
 def main() -> None:

@@ -23,20 +23,17 @@
 
 from argparse import ArgumentParser
 import os
+import sys
 import time
 import numpy as np
 import logging
 import math
 try: # First try from parent directory
-    from .QFile import QFile
     from .QHeader import QHeader
-    from .QConfig import QConfig
     from .QReduce import QReduce
 except ImportError:
     try: # Then try from current directory
-        from QFile import QFile
         from QHeader import QHeader
-        from QConfig import QConfig
         from QReduce import QReduce
     except ImportError:
         raise
@@ -100,7 +97,8 @@ def reduceFiles(qFiles: dict, fnConfig: str, ofn: str, maxSize: int) -> int | No
     """
     qrConfig = QReduce.loadConfig(fnConfig)
     logging.info("Config %s -> %s", fnConfig, qrConfig)
-    if qrConfig is None: return None
+    if qrConfig is None:
+        return None
 
     info = {}
     totSize = 0
@@ -187,16 +185,18 @@ def decimateFiles(qFiles: dict, ofn: str, totSize: int, maxSize: int) -> int:
                              ifn, hdrSize, dataSize, len(offsets), item["nRecords"])
                 with open(ifn, "rb") as ifp:
                     buffer = ifp.read(hdrSize)
-                    if len(buffer) != hdrSize: continue
+                    if len(buffer) != hdrSize:
+                        continue
                     ofp.write(buffer)
                     for offset in offsets:
                         ifp.seek(offset)
                         buffer = ifp.read(dataSize)
-                        if len(buffer) != dataSize: break
+                        if len(buffer) != dataSize:
+                            break
                         ofp.write(buffer)
             fSize = ofp.tell()
             return fSize
-    except (OSError, ValueError) as e:
+    except (OSError, ValueError):
         logging.exception("Unable to decimate %s to %s", filenames, ofn)
         return 0
 
@@ -219,14 +219,15 @@ def glueFiles(filenames: list[str], ofn: str, bufferSize: int = 1024*1024) -> in
                 with open(ifn, "rb") as ifp:
                     while True:
                         buffer = ifp.read(bufferSize)
-                        if len(buffer) <= 0: break # EOF
+                        if len(buffer) <= 0:
+                            break # EOF
                         ofp.write(buffer)
                         logging.info("Appended %s to %s with %s bytes", ifn, ofn, len(buffer))
                         totSize += len(buffer)
             fSize = ofp.tell()
             logging.info("Glued %s to %s fSize %s", totSize, ofn, fSize)
             return fSize
-    except OSError as e:
+    except OSError:
         logging.exception("Unable to glue %s to %s", filenames, ofn)
         return 0
 
@@ -289,7 +290,7 @@ def scanDirectory(args: ArgumentParser, times: np.ndarray) -> int:
             return fSize
         logging.info("Reduced maxsize by %s since file already exists", fSize)
     elif not qFiles: # No q-files, so create empty file and return 0
-        with open(args.output, "wb") as fp:
+        with open(args.output, "wb"):
             pass
         logging.info("No new files, so created an empty file %s", args.output)
         return 0
@@ -297,7 +298,8 @@ def scanDirectory(args: ArgumentParser, times: np.ndarray) -> int:
     if args.config and os.path.isfile(args.config): # We're going to reduce the size of the Q-files,
         value =  reduceFiles(qFiles, args.config, args.output, args.maxSize)
         # Fall through if config is empty
-        if value is not None: return value
+        if value is not None:
+            return value
 
     logging.info("Total size %s max %s", totSize, args.maxSize)
 
@@ -351,7 +353,8 @@ def main() -> None:
 
         if args.config is None:
             fn = os.path.abspath(os.path.expanduser(os.path.join(args.datadir, "mergeqfiles.cfg")))
-            if os.path.isfile(fn): args.config = fn
+            if os.path.isfile(fn):
+                args.config = fn
         elif args.config == "": 
             args.config = None
         else:
@@ -369,7 +372,7 @@ def main() -> None:
         outSize = scanDirectory(args, times)
         logging.info("printing outSize %s to console", outSize)
         print(outSize)
-    except Exception as e:
+    except Exception:
         logging.exception("Unexpected exception executing %s", args)
         sys.exit(1)
 

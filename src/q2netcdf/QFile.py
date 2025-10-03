@@ -57,7 +57,8 @@ class QFile:
 
     def __exit__(self, *args):
         if self.__fp:
-            if not self.__fp.closed: self.__fp.close()
+            if not self.__fp.closed:
+                self.__fp.close()
             self.__fp = None
 
     def __del__(self) -> None:

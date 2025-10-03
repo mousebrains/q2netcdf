@@ -410,7 +410,7 @@ class QHexCodes:
     def __repr__(cls) -> str:
         msg = []
         for key in sorted(cls.__hexMap):
-            msg.append(f"{key:#05x} {cls.__hexMap[key]}");
+            msg.append(f"{key:#05x} {cls.__hexMap[key]}")
         return "\n".join(msg)
 
     @staticmethod

@@ -21,7 +21,8 @@ def chkNotNegative(val: float) -> float:
     """
     try:
         val = float(val)
-        if val >= 0: return val
+        if val >= 0:
+            return val
         msg = ArgumentTypeError(f"{val} is < 0")
     except (ValueError, TypeError):
         msg = ArgumentTypeError(f"{val} is not numeric")
@@ -42,7 +43,8 @@ def chkPositive(val: float) -> float:
     """
     try:
         val = float(val)
-        if val > 0: return val
+        if val > 0:
+            return val
         msg = ArgumentTypeError(f"{val} is <= 0")
     except (ValueError, TypeError):
         msg = ArgumentTypeError(f"{val} is not numeric")
@@ -173,12 +175,13 @@ def main() -> None:
     args.isdpConfig = os.path.abspath(os.path.expanduser(args.isdpConfig))
     if not os.path.isdir(os.path.dirname(args.isdpConfig)):
         dirname = os.path.dirname(args.isdpConfig)
-        raise ArgumentTypeError(f"WARNING, {dirname}, is not a directory");
+        raise ArgumentTypeError(f"WARNING, {dirname}, is not a directory")
 
     config = {}
     values = vars(args)
     for key in values:
-        if key == "isdpConfig": continue
+        if key == "isdpConfig":
+            continue
         val = values[key]
         if val is not None: 
             config[key] = val

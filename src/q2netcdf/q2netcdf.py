@@ -16,12 +16,10 @@ import struct
 try: # First try parent directory
     from .QHeader import QHeader
     from .QData import QData
-    from .QFile import QFile
 except ImportError:
     try: # Then try local directory
         from QHeader import QHeader
         from QData import QData
-        from QFile import QFile
     except ImportError:
         raise
 
@@ -43,11 +41,13 @@ def loadQfile(fn:str) -> xr.Dataset | None:
         while True:
             if QHeader.chkIdent(fp):
                 hdr = QHeader(fp, fn)
-                if hdr is None: break # EOF
+                if hdr is None:
+                    break # EOF
                 data = QData(hdr)
             elif QData.chkIdent(fp):
                 record = data.load(fp)
-                if record is None: break # EOF
+                if record is None:
+                    break # EOF
                 [record, attrs] = record.split(hdr)
                 qFreq = False
                 t0 = record["time"]
@@ -68,13 +68,15 @@ def loadQfile(fn:str) -> xr.Dataset | None:
                                        attrs[key] if key in attrs else None,
                                        )
                 coords = dict(time=[t0])
-                if qFreq: coords["freq"] = np.array(hdr.frequencies)
+                if qFreq:
+                    coords["freq"] = np.array(hdr.frequencies)
                 ds = xr.Dataset(data_vars=values, coords=coords)
 
                 records.append(ds)
             else:
                 buffer = fp.read(2)
-                if len(buffer) != 2: break # EOF
+                if len(buffer) != 2:
+                    break # EOF
                 (ident,) = struct.unpack("<H", buffer)
                 logging.warning(f"Unsupported identifier, {ident:#06x}, at {fp.tell()-2} in {fn}")
                 break
