@@ -150,6 +150,8 @@ ruff check src/ tests/    # Lint
 mypy src/                 # Type check
 ```
 
+To run a module for testing `python3 -m src.q2netcdf.QHeader --help`
+
 ## License
 
 See LICENSE file for details.
