@@ -57,19 +57,24 @@ class QConfig:
             return np.array(fields)
 
         matches = self._PATTERN_INT.match(val)
-        if matches: return int(val)
+        if matches:
+            return int(val)
 
         matches = self._PATTERN_FLOAT.match(val)
-        if matches: return float(val)
+        if matches:
+            return float(val)
 
         matches = self._PATTERN_STRING.match(val)
-        if matches: return matches[1]
+        if matches:
+            return matches[1]
 
         matches = self._PATTERN_TRUE.match(val)
-        if matches: return True
+        if matches:
+            return True
 
         matches = self._PATTERN_FALSE.match(val)
-        if matches: return False
+        if matches:
+            return False
 
         return val
 

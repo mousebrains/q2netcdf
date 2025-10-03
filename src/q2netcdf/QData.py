@@ -152,7 +152,8 @@ class QData:
     def load(self, fp) -> QRecord | None:
         hdr = self.__hdr
         buffer = fp.read(hdr.dataSize)
-        if len(buffer) != hdr.dataSize: return None # EOF while reading
+        if len(buffer) != hdr.dataSize:
+            return None  # EOF while reading
 
         items = struct.unpack(self.__format, buffer)
         if hdr.version.isV12():

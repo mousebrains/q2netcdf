@@ -39,7 +39,8 @@ class QHeader:
     def chkIdent(cls, fp) -> bool | None:
         n = 2
         buffer = fp.read(n)
-        if len(buffer) != n: return None
+        if len(buffer) != n:
+            return None
         (ident,) = struct.unpack("<H", buffer)
         fp.seek(-n, 1) # Back up n bytes
         return ident == RecordType.HEADER.value

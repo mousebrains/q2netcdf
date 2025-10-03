@@ -176,11 +176,13 @@ def addEncoding(ds: xr.Dataset, level: int = 5) -> xr.Dataset:
     Returns:
         Dataset with compression encoding added
     """
-    if level <= 0: return ds
+    if level <= 0:
+        return ds
 
     for name in ds:
-        if ds[name].dtype.kind == "U": continue
-        ds[name].encoding = {'compression': 'zlib', 'compression_level': level}
+        if ds[name].dtype.kind == "U":
+            continue
+        ds[name].encoding = {"compression": "zlib", "compression_level": level}
 
     return ds
 

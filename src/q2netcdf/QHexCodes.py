@@ -416,12 +416,14 @@ class QHexCodes:
     @staticmethod
     def __fixName(name: str | list | tuple, cnt: int) -> str:
         if isinstance(name, str):
-            if not name.endswith("_"): return name
+            if not name.endswith("_"):
+                return name
             cnt = cnt # 0-15 -> 1-16
             return f"{name}{cnt}"
 
         if isinstance(name, (list, tuple)):
-            if len(name) > cnt: return name[cnt]
+            if len(name) > cnt:
+                return name[cnt]
             raise ValueError(f"cnt({cnt}) >= ({len(name)}) names <-  {name}")
 
         raise NotImplementedError(f"Unsupported name type, {type(name)} <- {name}")
@@ -448,7 +450,8 @@ class QHexCodes:
             Human-readable name (e.g., "sh_0") or None if not found
         """
         (item, cnt) = cls.__findIdent(ident)
-        if item is None: return None
+        if item is None:
+            return None
 
         name = item[0]
         return cls.__fixName(name, cnt)
@@ -465,7 +468,8 @@ class QHexCodes:
             Dictionary with long_name, units, etc., or None if not found
         """
         (item, cnt) = cls.__findIdent(ident)
-        if item is None: return None
+        if item is None:
+            return None
 
         attrs = item[1].copy() # In case I modify it
 
