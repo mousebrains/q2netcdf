@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "q2netcdf"
-version = "0.2.0"
+version = "0.3.0"
 authors = [{name="Pat Welch", email="pat@mousebrains.com"}]
 maintainers = [{name="Pat Welch", email="pat@mousebrains.com"}]
 description = "Manipulate Rockland Scientific's Q-files"
