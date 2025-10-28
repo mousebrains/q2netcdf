@@ -211,7 +211,7 @@ def main() -> None:
     if len(frames) == 1:
         ds = frames[0]
     else:
-        ds = xr.merge(frames)
+        ds = xr.merge(frames, compat="override", join="outer")
 
     ds = cfCompliant(ds)
     ds = addEncoding(ds, args.compressionLevel)
