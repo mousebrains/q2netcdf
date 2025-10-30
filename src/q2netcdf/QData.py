@@ -7,7 +7,7 @@
 import struct
 import numpy as np
 import logging
-from typing import Any
+from typing import Any, Optional, Tuple, Dict
 from .QHeader import QHeader
 from .QHexCodes import QHexCodes
 from .QRecordType import RecordType
@@ -58,8 +58,8 @@ class QRecord:
 
     def split(self, hdr:QHeader) -> tuple:
         hexMap = QHexCodes()
-        record: dict[str, Any] = {}
-        attrs: dict[str, Any] = {}
+        record: Dict[str, Any] = {}
+        attrs: Dict[str, Any] = {}
 
         record["time"] = self.t0
         attrs["time"] = {"long_name": "time"}
@@ -137,7 +137,7 @@ class QData:
             self.__format = "<He" + ("e" * hdr.Nc) + ("e" * hdr.Ns * hdr.Nf)
 
     @classmethod
-    def chkIdent(cls, fp) -> bool | None:
+    def chkIdent(cls, fp) -> Optional[bool]:
         n = 2
         buffer = fp.read(n)
         if len(buffer) != n:
@@ -146,7 +146,7 @@ class QData:
         fp.seek(-n, 1) # Backup n bytes
         return ident == RecordType.DATA.value
 
-    def load(self, fp) -> QRecord | None:
+    def load(self, fp) -> Optional[QRecord]:
         hdr = self.__hdr
         buffer = fp.read(hdr.dataSize)
         if len(buffer) != hdr.dataSize:

@@ -13,11 +13,11 @@ import xarray as xr
 import logging
 import sys
 import struct
-from typing import Any
+from typing import Any, Dict, Optional
 from .QHeader import QHeader
 from .QData import QData
 
-def loadQfile(fn:str) -> xr.Dataset | None:
+def loadQfile(fn:str) -> Optional[xr.Dataset]:
     """
     Load a Q-file and convert it to an xarray Dataset.
 
@@ -29,8 +29,8 @@ def loadQfile(fn:str) -> xr.Dataset | None:
         and spectra, or None if file is invalid/empty
     """
     records = []
-    hdr: QHeader | None = None
-    data: QData | None = None
+    hdr: Optional[QHeader] = None
+    data: Optional[QData] = None
 
     with open(fn, "rb") as fp:
         while True:
@@ -50,7 +50,7 @@ def loadQfile(fn:str) -> xr.Dataset | None:
                 qFreq = False
                 t0 = record["time"]
                 del record["time"]
-                values: dict[str, Any] = {}
+                values: Dict[str, Any] = {}
                 qFreq = False
                 for key in record:
                     val = record[key]
@@ -93,7 +93,7 @@ def loadQfile(fn:str) -> xr.Dataset | None:
     ds = ds.assign_coords(ftime=[ftime], despike=np.arange(3))
 
     assert hdr.version is not None  # Version is always set in QHeader.__init__
-    toAdd: dict[str, Any] = dict(fileversion=("ftime", [hdr.version.value]))
+    toAdd: Dict[str, Any] = dict(fileversion=("ftime", [hdr.version.value]))
 
     config = hdr.config.config()
     for key in config: 

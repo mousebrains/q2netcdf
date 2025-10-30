@@ -13,7 +13,7 @@ import logging
 import struct
 import os
 import numpy as np
-from typing import Any
+from typing import Any, Dict, Optional, Tuple, Union, IO
 from .QHeader import QHeader
 from .QHexCodes import QHexCodes
 from .QVersion import QVersion
@@ -29,9 +29,9 @@ class QReduce:
 
     The reduced file uses v1.3 format regardless of input version.
     """
-    __name2ident: dict[str, int] = {}
+    __name2ident: Dict[str, int] = {}
 
-    def __init__(self, filename: str, config: dict) -> None:
+    def __init__(self, filename: str, config: Dict[str, Any]) -> None:
         self.filename = filename
 
         channelIdents = self.__updateName2Ident(config, "channels") # Get intersecting idents
@@ -66,7 +66,7 @@ class QReduce:
             body += spectraIdents.astype("<u2").tobytes()
             body += np.array(hdr.frequencies).astype("<f2").tobytes()
 
-        myConfig: dict[str, Any] = {}
+        myConfig: Dict[str, Any] = {}
         if isinstance(config, dict) and "config" in config:
             hdrConfig = hdr.config.config()
             for name in config["config"]:
@@ -104,7 +104,7 @@ class QReduce:
         return ", ".join(msgs)
 
     @classmethod
-    def loadConfig(cls, filename: str) -> dict | None:
+    def loadConfig(cls, filename: str) -> Optional[Dict[str, Any]]:
         if os.path.isfile(filename):
             try:
                 with open(filename, "r") as fp:
@@ -134,7 +134,7 @@ class QReduce:
         return indices.flatten()
 
     @staticmethod
-    def __findIndices(idents: np.ndarray | None, known: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    def __findIndices(idents: Optional[np.ndarray], known: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         if idents is None:
             return (np.array([], dtype=int), np.array([], dtype=int))
 
@@ -143,7 +143,7 @@ class QReduce:
         return (idents[ix], iRHS[ix])
 
     @classmethod
-    def __updateName2Ident(cls, config: dict, key: str) -> np.ndarray | None:
+    def __updateName2Ident(cls, config: Dict[str, Any], key: str) -> Optional[np.ndarray]:
         if not isinstance(config, dict):
             return None
         if key not in config or not isinstance(config[key], list):
@@ -151,7 +151,7 @@ class QReduce:
 
         idents = []
         for name in config[key]:
-            ident: int | None
+            ident: Optional[int]
             if name in cls.__name2ident:
                 ident = cls.__name2ident[name]
             else:
@@ -165,7 +165,7 @@ class QReduce:
 
         return np.array(idents, dtype="uint16")
 
-    def __reduceRecord(self, buffer: bytes) -> bytes | None:
+    def __reduceRecord(self, buffer: bytes) -> Optional[bytes]:
         if len(buffer) != self.dataSizeOrig:
             return None
 
@@ -175,7 +175,7 @@ class QReduce:
         record += data.tobytes()
         return record
 
-    def reduceFile(self, ofp) -> int:
+    def reduceFile(self, ofp: IO[bytes]) -> int:
         """
         Write reduced Q-file to output file pointer.
 
@@ -197,7 +197,7 @@ class QReduce:
                     totSize += ofp.write(record)
             return totSize
 
-    def decimate(self, ofp, indices: np.ndarray) -> int:
+    def decimate(self, ofp: IO[bytes], indices: np.ndarray) -> int:
         """
         Write decimated Q-file records to output file pointer.
 

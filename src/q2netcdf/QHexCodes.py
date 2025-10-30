@@ -6,6 +6,7 @@
 
 import logging
 import re
+from typing import Union, Optional, Dict, Tuple, Any
 
 class QHexCodes:
     """
@@ -403,7 +404,7 @@ class QHexCodes:
             0xD20: ["diagnostic_", { }, ], # Value that shouldn't be here
             }
 
-    def __init__(self):
+    def __init__(self) -> None:
         pass
 
     @classmethod
@@ -414,7 +415,7 @@ class QHexCodes:
         return "\n".join(msg)
 
     @staticmethod
-    def __fixName(name: str | list | tuple, cnt: int) -> str:
+    def __fixName(name: Union[str, Any], cnt: int) -> str:
         if isinstance(name, str):
             if not name.endswith("_"):
                 return name
@@ -429,7 +430,7 @@ class QHexCodes:
         raise NotImplementedError(f"Unsupported name type, {type(name)} <- {name}")
 
     @classmethod
-    def __findIdent(cls, ident: int) -> tuple[list | None, int | None]:
+    def __findIdent(cls, ident: int) -> Tuple[Optional[Any], Optional[int]]:
         key = ident & 0xfff0
         cnt = ident & 0x0f
         if key in cls.__hexMap:
@@ -439,7 +440,7 @@ class QHexCodes:
         return (None, None)
 
     @classmethod
-    def name(cls, ident: int) -> str | None:
+    def name(cls, ident: int) -> Optional[str]:
         """
         Get the name for a given identifier.
 
@@ -458,7 +459,7 @@ class QHexCodes:
         return cls.__fixName(name, cnt)
 
     @classmethod
-    def attributes(cls, ident: int) -> dict | None:
+    def attributes(cls, ident: int) -> Optional[Dict[str, Any]]:
         """
         Get the metadata attributes for a given identifier.
 
@@ -481,7 +482,7 @@ class QHexCodes:
         return attrs
 
     @classmethod
-    def name2ident(cls, name: str) -> int | None:
+    def name2ident(cls, name: str) -> Optional[int]:
         """
         Convert a name to its hexadecimal identifier (reverse lookup).
 

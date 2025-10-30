@@ -6,6 +6,7 @@
 import re
 import numpy as np
 import json
+from typing import Union, Optional
 from .QVersion import QVersion
 
 class QConfig:
@@ -28,7 +29,7 @@ class QConfig:
     def __init__(self, config: bytes, version: QVersion) -> None:
         self.__config = config
         self.__version = version
-        self.__dict: dict | None = None
+        self.__dict: Optional[dict] = None
 
     def __repr__(self) -> str:
         config = self.config()
@@ -37,7 +38,7 @@ class QConfig:
             msg.append(f"{key} -> {config[key]}")
         return "\n".join(msg)
 
-    def __parseValue(self, val: str) -> int | float | str | bool | np.ndarray:
+    def __parseValue(self, val: str) -> Union[int, float, str, bool, np.ndarray]:
         # Use cached compiled patterns for better performance
         matches = self._PATTERN_ARRAY.match(val)
         if matches:

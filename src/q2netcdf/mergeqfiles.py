@@ -25,17 +25,14 @@ from argparse import ArgumentParser, Namespace
 import os
 import sys
 import time
-import numpy as np
 import logging
 import math
 import json
-import logging
 import struct
-import os
-import numpy as np
-from typing import Any
 import re
 from enum import Enum
+from typing import Any, Optional, Union, Tuple, Dict, List, IO
+import numpy as np
 
 class RecordType(Enum):
     """
@@ -95,7 +92,7 @@ class QConfig:
     def __init__(self, config: bytes, version: QVersion) -> None:
         self.__config = config
         self.__version = version
-        self.__dict: dict= None
+        self.__dict: Optional[Dict[str, Any]] = None
 
     def __repr__(self) -> str:
         config = self.config()
@@ -104,7 +101,7 @@ class QConfig:
             msg.append(f"{key} -> {config[key]}")
         return "\n".join(msg)
 
-    def __parseValue(self, val: str):
+    def __parseValue(self, val: str) -> Union[int, float, str, bool, np.ndarray]:
         # Use cached compiled patterns for better performance
         matches = self._PATTERN_ARRAY.match(val)
         if matches:
@@ -162,7 +159,7 @@ class QConfig:
     def raw(self) -> bytes:
         return self.__config
 
-    def config(self) -> dict:
+    def config(self) -> Dict[str, Any]:
         if self.__dict is None:
             if self.__version.isV12():
                 self.__splitConfigV12()
@@ -170,140 +167,6 @@ class QConfig:
                 self.__splitConfigv13()
         assert self.__dict is not None  # After split methods, dict is populated
         return self.__dict
-
-class QConfig:
-    """
-    Parser for Q-file configuration records.
-
-    Configuration records contain key-value pairs with various data types
-    including integers, floats, strings, booleans, and arrays.
-    """
-
-    # Cached compiled regex patterns for performance (class-level constants)
-    _PATTERN_ARRAY = re.compile(r"^\[(.*)\]$")
-    _PATTERN_INT = re.compile(r"^[+-]?\d+$")
-    _PATTERN_FLOAT = re.compile(r"^[+-]?\d+[.]\d*(|[Ee][+-]?\d+)$")
-    _PATTERN_STRING = re.compile(r'^"(.*)"$')
-    _PATTERN_TRUE = re.compile(r"^true$")
-    _PATTERN_FALSE = re.compile(r"^false$")
-    _PATTERN_V12_LINE = re.compile(r"^\"(.*)\"\s*=>\s*(.*)$")
-
-    def __init__(self, config: bytes, version: QVersion) -> None:
-        self.__config = config
-        self.__version = version
-        self.__dict: dict= None
-
-    def __repr__(self) -> str:
-        config = self.config()
-        msg = []
-        for key in sorted(config):
-            msg.append(f"{key} -> {config[key]}")
-        return "\n".join(msg)
-
-    def __parseValue(self, val: str):
-        # Use cached compiled patterns for better performance
-        matches = self._PATTERN_ARRAY.match(val)
-        if matches:
-            # Handle empty arrays
-            content = matches[1].strip()
-            if not content:
-                return np.array([])
-            fields = []
-            for field in content.split(","):
-                fields.append(self.__parseValue(field.strip()))
-            return np.array(fields)
-
-        matches = self._PATTERN_INT.match(val)
-        if matches:
-            return int(val)
-
-        matches = self._PATTERN_FLOAT.match(val)
-        if matches:
-            return float(val)
-
-        matches = self._PATTERN_STRING.match(val)
-        if matches:
-            return matches[1]
-
-        matches = self._PATTERN_TRUE.match(val)
-        if matches:
-            return True
-
-        matches = self._PATTERN_FALSE.match(val)
-        if matches:
-            return False
-
-        return val
-
-    def __splitConfigV12(self) -> None:
-        self.__dict = dict()
-        for line in self.__config.split(b"\n"):
-            try:
-                line_str = line.decode("utf-8").strip()
-                matches = self._PATTERN_V12_LINE.match(line_str)
-                if matches:
-                    self.__dict[matches[1]] = self.__parseValue(matches[2])
-            except (UnicodeDecodeError, ValueError):
-                pass
-
-    def __splitConfigv13(self) -> None:
-        self.__dict = json.loads(self.__config)
-
-    def __len__(self) -> int:
-        return len(self.__config)
-
-    def size(self) -> int:
-        return len(self)
-
-    def raw(self) -> bytes:
-        return self.__config
-
-    def config(self) -> dict:
-        if self.__dict is None:
-            if self.__version.isV12():
-                self.__splitConfigV12()
-            else:
-                self.__splitConfigv13()
-        assert self.__dict is not None  # After split methods, dict is populated
-        return self.__dict
-
-class RecordType(Enum):
-    """
-    Q-file binary record type identifiers.
-
-    Q-files contain different types of records, each identified by a
-    16-bit hexadecimal value at the start of the record.
-
-    Attributes:
-        HEADER: Header record (0x1729) - Contains file metadata, sensor list
-        CONFIG_V12: Configuration record for v1.2 (0x0827) - Beta version only
-        DATA: Data record (0x1657) - Contains measurements and spectra
-    """
-    HEADER = 0x1729       # Header record with channels, spectra, frequencies
-    CONFIG_V12 = 0x0827   # v1.2 configuration record identifier (beta)
-    DATA = 0x1657         # Data record with measurements
-
-class QVersion(Enum):
-    """
-    Q-File format versions.
-
-    Rockland Scientific's ISDP data logger produces Q-files in different
-    format versions. This enum identifies the version for proper parsing.
-
-    Attributes:
-        v12: Version 1.2 - Documented in Rockland's TN-054
-        v13: Version 1.3 - Reduced redundancy version of v1.2
-    """
-    v12 = 1.2 # Documented in Rockland's TN054
-    v13 = 1.3 # My reduced redundancy version of v1.2
-
-    def isV12(self) -> bool:
-        """Check if this is version 1.2."""
-        return self == QVersion.v12
-
-    def isV13(self) -> bool:
-        """Check if this is version 1.3."""
-        return self == QVersion.v13
 
 class QHexCodes:
     """
@@ -701,7 +564,7 @@ class QHexCodes:
             0xD20: ["diagnostic_", { }, ], # Value that shouldn't be here
             }
 
-    def __init__(self):
+    def __init__(self) -> None:
         pass
 
     @classmethod
@@ -712,7 +575,7 @@ class QHexCodes:
         return "\n".join(msg)
 
     @staticmethod
-    def __fixName(name, cnt: int) -> str:
+    def __fixName(name: Union[str, List, Tuple], cnt: int) -> str:
         if isinstance(name, str):
             if not name.endswith("_"):
                 return name
@@ -727,7 +590,7 @@ class QHexCodes:
         raise NotImplementedError(f"Unsupported name type, {type(name)} <- {name}")
 
     @classmethod
-    def __findIdent(cls, ident: int) -> tuple:
+    def __findIdent(cls, ident: int) -> Tuple[Optional[List], Optional[int]]:
         key = ident & 0xfff0
         cnt = ident & 0x0f
         if key in cls.__hexMap:
@@ -737,7 +600,7 @@ class QHexCodes:
         return (None, None)
 
     @classmethod
-    def name(cls, ident: int) -> str:
+    def name(cls, ident: int) -> Optional[str]:
         """
         Get the name for a given identifier.
 
@@ -756,7 +619,7 @@ class QHexCodes:
         return cls.__fixName(name, cnt)
 
     @classmethod
-    def attributes(cls, ident: int) -> dict:
+    def attributes(cls, ident: int) -> Optional[Dict[str, Any]]:
         """
         Get the metadata attributes for a given identifier.
 
@@ -779,7 +642,7 @@ class QHexCodes:
         return attrs
 
     @classmethod
-    def name2ident(cls, name: str) -> int:
+    def name2ident(cls, name: str) -> Optional[int]:
         """
         Convert a name to its hexadecimal identifier (reverse lookup).
 
@@ -819,7 +682,7 @@ class QHeader:
     """
 
     @classmethod
-    def chkIdent(cls, fp) -> bool:
+    def chkIdent(cls, fp: IO[bytes]) -> Optional[bool]:
         n = 2
         buffer = fp.read(n)
         if len(buffer) != n:
@@ -828,7 +691,7 @@ class QHeader:
         fp.seek(-n, 1) # Back up n bytes
         return ident == RecordType.HEADER.value
 
-    def __init__(self, fp, fn:str) -> None:
+    def __init__(self, fp: IO[bytes], fn:str) -> None:
         self.filename = fn
         hdrSize = 0
 
@@ -854,8 +717,8 @@ class QHeader:
         self.dtBinary = dt
         self.time = np.datetime64("0000-01-01") + np.timedelta64(dt, "ms")
 
-        self.channels: tuple = ()
-        self.spectra: tuple = ()
+        self.channels: Tuple[int, ...] = ()
+        self.spectra: Tuple[int, ...] = ()
 
         if self.Nc: # Some channel identifiers to read
             sz = self.Nc * 2
@@ -937,7 +800,7 @@ class QReduce:
 
     The reduced file uses v1.3 format regardless of input version.
     """
-    __name2ident: dict = {}
+    __name2ident: Dict[str, int] = {}
 
     def __init__(self, filename: str, config: dict) -> None:
         self.filename = filename
@@ -974,7 +837,7 @@ class QReduce:
             body += spectraIdents.astype("<u2").tobytes()
             body += np.array(hdr.frequencies).astype("<f2").tobytes()
 
-        myConfig: dict = {}
+        myConfig: Dict[str, Any] = {}
         if isinstance(config, dict) and "config" in config:
             hdrConfig = hdr.config.config()
             for name in config["config"]:
@@ -1012,7 +875,7 @@ class QReduce:
         return ", ".join(msgs)
 
     @classmethod
-    def loadConfig(cls, filename: str) -> dict:
+    def loadConfig(cls, filename: str) -> Optional[Dict[str, Any]]:
         if os.path.isfile(filename):
             try:
                 with open(filename, "r") as fp:
@@ -1042,7 +905,7 @@ class QReduce:
         return indices.flatten()
 
     @staticmethod
-    def __findIndices(idents: np.ndarray, known: np.ndarray) -> tuple:
+    def __findIndices(idents: Optional[np.ndarray], known: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         if idents is None:
             return (np.array([], dtype=int), np.array([], dtype=int))
 
@@ -1051,7 +914,7 @@ class QReduce:
         return (idents[ix], iRHS[ix])
 
     @classmethod
-    def __updateName2Ident(cls, config: dict, key: str) -> np.ndarray:
+    def __updateName2Ident(cls, config: Dict[str, Any], key: str) -> Optional[np.ndarray]:
         if not isinstance(config, dict):
             return None
         if key not in config or not isinstance(config[key], list):
@@ -1059,7 +922,7 @@ class QReduce:
 
         idents = []
         for name in config[key]:
-            ident: int
+            ident: Optional[int]
             if name in cls.__name2ident:
                 ident = cls.__name2ident[name]
             else:
@@ -1073,7 +936,7 @@ class QReduce:
 
         return np.array(idents, dtype="uint16")
 
-    def __reduceRecord(self, buffer: bytes) -> bytes:
+    def __reduceRecord(self, buffer: bytes) -> Optional[bytes]:
         if len(buffer) != self.dataSizeOrig:
             return None
 
@@ -1083,7 +946,7 @@ class QReduce:
         record += data.tobytes()
         return record
 
-    def reduceFile(self, ofp) -> int:
+    def reduceFile(self, ofp: IO[bytes]) -> int:
         """
         Write reduced Q-file to output file pointer.
 
@@ -1105,7 +968,7 @@ class QReduce:
                     totSize += ofp.write(record)
             return totSize
 
-    def decimate(self, ofp, indices: np.ndarray) -> int:
+    def decimate(self, ofp: IO[bytes], indices: np.ndarray) -> int:
         """
         Write decimated Q-file records to output file pointer.
 
@@ -1135,7 +998,7 @@ def __chkExists(filename: str) -> str:
         return filename
     raise ArgumentTypeError(f"{filename} does not exist")
 
-def reduceAndDecimate(info: dict, ofp, ofn: str, maxSize: int) -> int:
+def reduceAndDecimate(info: Dict[str, QReduce], ofp: IO[bytes], ofn: str, maxSize: int) -> int:
     """
     Reduce and decimate Q-files to fit within maximum size.
 
@@ -1179,7 +1042,7 @@ def reduceAndDecimate(info: dict, ofp, ofn: str, maxSize: int) -> int:
                      qr.filename, ofn, qr.fileSizeOrig, sz, indices.size, qr.nRecords.astype(int))
     return ofp.tell()
 
-def reduceFiles(qFiles: dict, fnConfig: str, ofn: str, maxSize: int) -> int:
+def reduceFiles(qFiles: Dict[str, int], fnConfig: str, ofn: str, maxSize: int) -> Optional[int]:
     """
     Reduce Q-files using configuration and write to output.
 
@@ -1216,7 +1079,7 @@ def reduceFiles(qFiles: dict, fnConfig: str, ofn: str, maxSize: int) -> int:
         return ofp.tell() # Actual file size
 
 
-def decimateFiles(qFiles: dict, ofn: str, totSize: int, maxSize: int) -> int:
+def decimateFiles(qFiles: Dict[str, int], ofn: str, totSize: int, maxSize: int) -> int:
     """
     Decimate Q-files to fit within maximum size.
 
@@ -1297,7 +1160,7 @@ def decimateFiles(qFiles: dict, ofn: str, totSize: int, maxSize: int) -> int:
         logging.exception("Unable to decimate %s to %s", filenames, ofn)
         return 0
 
-def glueFiles(filenames: list, ofn: str, bufferSize: int = 1024*1024) -> int:
+def glueFiles(filenames: List[str], ofn: str, bufferSize: int = 1024*1024) -> int:
     """
     Concatenate Q-files into single output file.
 
@@ -1328,7 +1191,7 @@ def glueFiles(filenames: list, ofn: str, bufferSize: int = 1024*1024) -> int:
         logging.exception("Unable to glue %s to %s", filenames, ofn)
         return 0
 
-def fileCandidates(args: Namespace, times: np.ndarray) -> tuple:
+def fileCandidates(args: Namespace, times: np.ndarray) -> Tuple[Dict[str, int], int]:
     """
     Find Q-file candidates within time range.
 

@@ -6,7 +6,7 @@
 
 import os.path
 import logging
-from typing import Generator, Any
+from typing import Generator, Any, Optional, Union, Dict
 from .QHeader import QHeader
 from .QData import QData, QRecord
 
@@ -39,16 +39,16 @@ class QFile:
         """
         self.__fn = os.path.abspath(os.path.expanduser(fn))
         self.__fp = None
-        self.__data: QData | None = None
+        self.__data: Optional[QData] = None
 
         if not os.path.isfile(self.__fn):
             raise FileNotFoundError(f"{self.__fn} does not exist")
 
-    def __enter__(self):
+    def __enter__(self) -> "QFile":
         self.__maybeOpen__()
         return self
 
-    def __exit__(self, *args):
+    def __exit__(self, *args: Any) -> None:
         if self.__fp:
             if not self.__fp.closed:
                 self.__fp.close()
@@ -57,7 +57,7 @@ class QFile:
     def __del__(self) -> None:
         self.__exit__()
 
-    def __maybeOpen__(self):
+    def __maybeOpen__(self) -> Any:
         if not self.__fp or self.__fp.closed:
             # Use optimized buffer for better sequential read performance
             self.__fp = open(self.__fn, "rb", buffering=self.BUFFER_SIZE)
@@ -98,7 +98,7 @@ class QFile:
                 break
             yield record
 
-    def prettyRecord(self, record: QRecord) -> str | None:
+    def prettyRecord(self, record: QRecord) -> Optional[str]:
         """
         Format a QRecord as a human-readable string.
 
@@ -110,7 +110,7 @@ class QFile:
         """
         return self.__data.prettyRecord(record) if self.__data else None
 
-    def validate(self) -> dict[str, Any]:
+    def validate(self) -> Dict[str, Any]:
         """
         Validate Q-file integrity and return diagnostic information.
 
@@ -125,7 +125,7 @@ class QFile:
         """
         from .QHexCodes import QHexCodes
 
-        results: dict[str, Any] = {
+        results: Dict[str, Any] = {
             "valid": True,
             "version": None,
             "records_readable": 0,
