@@ -12,7 +12,6 @@ import json
 import sys
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
-from q2netcdf import mergeqfiles
 from q2netcdf.mergeqfiles import (
     RecordType,
     QVersion,
