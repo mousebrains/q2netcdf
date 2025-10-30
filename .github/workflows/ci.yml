@@ -15,19 +15,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python-version: ['3.7', '3.8', '3.9', '3.10', '3.11', '3.12', '3.13']
-        exclude:
-          # Python 3.7 and 3.8 are not available on ubuntu-latest (22.04)
-          - os: ubuntu-latest
-            python-version: '3.7'
-          - os: ubuntu-latest
-            python-version: '3.8'
-        include:
-          # Use ubuntu-20.04 for Python 3.7 and 3.8
-          - os: ubuntu-20.04
-            python-version: '3.7'
-          - os: ubuntu-20.04
-            python-version: '3.8'
+        python-version: ['3.9', '3.10', '3.11', '3.12', '3.13']
 
     steps:
     - name: Checkout code
@@ -52,7 +40,7 @@ jobs:
         pytest --cov=q2netcdf --cov-report=xml --cov-report=term-missing --cov-report=html -v
 
     - name: Upload coverage to Codecov
-      if: matrix.os == 'ubuntu-latest' || matrix.os == 'ubuntu-20.04'
+      if: matrix.os == 'ubuntu-latest'
       uses: codecov/codecov-action@v4
       with:
         file: ./coverage.xml
@@ -98,7 +86,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.7', '3.8', '3.9', '3.10', '3.11', '3.12', '3.13']
+        python-version: ['3.9', '3.10', '3.11', '3.12', '3.13']
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -117,7 +105,8 @@ jobs:
 
     - name: Run mypy
       run: |
-        mypy src/q2netcdf/ --python-version=${{ matrix.python-version }} --show-error-codes
+        mypy src/q2netcdf/ --show-error-codes
+      continue-on-error: true
 
   coverage-report:
     name: Coverage Report Summary

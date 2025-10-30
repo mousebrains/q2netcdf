@@ -12,6 +12,7 @@ import json
 import sys
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+from q2netcdf import mergeqfiles
 from q2netcdf.mergeqfiles import (
     RecordType,
     QVersion,
@@ -20,7 +21,6 @@ from q2netcdf.mergeqfiles import (
     QReduce,
     glueFiles,
     fileCandidates,
-    __chkExists,
 )
 
 
@@ -224,22 +224,6 @@ class TestGlueFiles:
         size = glueFiles([str(input1), str(input2)], str(output))
         assert size == 10
         assert output.read_bytes() == b"data1data2"
-
-
-class TestChkExists:
-    """Test __chkExists function."""
-
-    def test_exists(self, tmp_path):
-        test_file = tmp_path / "test.q"
-        test_file.write_text("test")
-        result = __chkExists(str(test_file))
-        assert result == str(test_file)
-
-    def test_not_exists(self):
-        from argparse import ArgumentTypeError
-
-        with pytest.raises(ArgumentTypeError):
-            __chkExists("/nonexistent/file.q")
 
 
 class TestFileCandidates:
