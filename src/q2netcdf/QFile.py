@@ -10,6 +10,7 @@ from typing import Generator, Any, Optional, Dict
 from .QHeader import QHeader
 from .QData import QData, QRecord
 
+
 class QFile:
     """
     Context manager for reading Rockland Scientific Q-files.
@@ -74,7 +75,7 @@ class QFile:
             frequencies, and configuration
         """
         fp = self.__maybeOpen__()
-        fp.seek(0) # Rewind to beginning
+        fp.seek(0)  # Rewind to beginning
         hdr = QHeader(fp, self.__fn)
         self.__data = QData(hdr)
         return hdr
@@ -90,7 +91,9 @@ class QFile:
             EOFError: If header() has not been called yet
         """
         if not self.__data:
-            raise EOFError(f"A header must be read before any data records in {self.__fn}")
+            raise EOFError(
+                f"A header must be read before any data records in {self.__fn}"
+            )
 
         while True:
             record = self.__data.load(self.__fp)
@@ -131,7 +134,7 @@ class QFile:
             "records_readable": 0,
             "records_failed": 0,
             "unknown_identifiers": set(),
-            "errors": []
+            "errors": [],
         }
 
         hexmap = QHexCodes()
@@ -170,9 +173,12 @@ class QFile:
         # Overall validity check
         if results["records_failed"] > 0:
             results["valid"] = False
-            results["errors"].append(f"{results['records_failed']} records failed to read")
+            results["errors"].append(
+                f"{results['records_failed']} records failed to read"
+            )
 
         return results
+
 
 def main() -> None:
     """Command-line interface for QFile."""
@@ -180,8 +186,12 @@ def main() -> None:
 
     parser = ArgumentParser()
     parser.add_argument("filename", type=str, nargs="+", help="Input filename(s)")
-    parser.add_argument("--validate", action="store_true", help="Validate Q-file integrity")
-    parser.add_argument("--n", type=int, default=10, help="Number of data records to print out")
+    parser.add_argument(
+        "--validate", action="store_true", help="Validate Q-file integrity"
+    )
+    parser.add_argument(
+        "--n", type=int, default=10, help="Number of data records to print out"
+    )
     parser.add_argument(
         "--logLevel",
         type=str,
@@ -213,7 +223,9 @@ def main() -> None:
                         print(f"  Records failed: {results['records_failed']}")
 
                     if results["unknown_identifiers"]:
-                        print(f"  Unknown identifiers: {len(results['unknown_identifiers'])}")
+                        print(
+                            f"  Unknown identifiers: {len(results['unknown_identifiers'])}"
+                        )
                         for ident in sorted(results["unknown_identifiers"]):
                             print(f"    {ident:#06x}")
 
@@ -237,6 +249,7 @@ def main() -> None:
             logging.info(f"EOF while reading {fn}")
         except Exception:
             logging.exception(f"While reading {fn}")
+
 
 if __name__ == "__main__":
     main()

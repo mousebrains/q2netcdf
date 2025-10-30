@@ -1,4 +1,5 @@
 """Tests for QConfig parser."""
+
 import pytest
 import numpy as np
 from q2netcdf.QConfig import QConfig
@@ -62,7 +63,7 @@ class TestQConfig:
 
     def test_parse_invalid_v13_json(self):
         """Test handling of invalid JSON in v1.3 config."""
-        config_str = b'{invalid json}'
+        config_str = b"{invalid json}"
         qconfig = QConfig(config_str, QVersion.v13)
 
         with pytest.raises(Exception):
@@ -70,7 +71,7 @@ class TestQConfig:
 
     def test_empty_config(self):
         """Test handling of empty configuration."""
-        config_str = b''
+        config_str = b""
         qconfig = QConfig(config_str, QVersion.v13)
         assert len(qconfig) == 0
 
@@ -177,7 +178,7 @@ class TestQConfig:
 
     def test_parse_v13_unicode_string(self):
         """Test parsing unicode strings in v1.3."""
-        config_str = '{"name": "测试"}'.encode('utf-8')
+        config_str = '{"name": "测试"}'.encode("utf-8")
         qconfig = QConfig(config_str, QVersion.v13)
         parsed = qconfig.config()
 

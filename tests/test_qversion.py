@@ -1,11 +1,12 @@
 """Tests for QVersion enum."""
+
 from q2netcdf.QVersion import QVersion
 
 
 def test_version_enum_values():
     """Test that QVersion enum has expected values."""
-    assert hasattr(QVersion, 'v12')
-    assert hasattr(QVersion, 'v13')
+    assert hasattr(QVersion, "v12")
+    assert hasattr(QVersion, "v13")
 
 
 def test_version_isV12():

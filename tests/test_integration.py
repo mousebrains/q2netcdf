@@ -10,6 +10,7 @@ from pathlib import Path
 import json
 
 import sys
+
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from q2netcdf import QFile, QHeader, QConfig, QHexCodes
@@ -35,7 +36,7 @@ class TestQFileIntegration:
         header += struct.pack("<f", 1.3)
 
         # Binary timestamp (milliseconds since 0000-01-01)
-        dt_ms = int(np.datetime64('2025-01-01').astype('datetime64[ms]').astype(int))
+        dt_ms = int(np.datetime64("2025-01-01").astype("datetime64[ms]").astype(int))
         header += struct.pack("<Q", dt_ms)
 
         # Number of channels, spectra, frequencies
@@ -46,9 +47,9 @@ class TestQFileIntegration:
         header += struct.pack("<HH", 0x160, 0x620)
 
         # Config size and empty config
-        config_str = '{}'
+        config_str = "{}"
         header += struct.pack("<H", len(config_str))
-        header += config_str.encode('utf-8')
+        header += config_str.encode("utf-8")
 
         # Data record size (ident=2, stime=2, 2 channels * 2 bytes each)
         data_size = 2 + 2 + (Nc * 2)
@@ -118,13 +119,10 @@ class TestQFileIntegration:
         config_data = {
             "sample_rate": 512,
             "channels": [1, 2, 3],
-            "calibration": {
-                "offset": 0.5,
-                "gain": 1.0
-            },
-            "enabled": True
+            "calibration": {"offset": 0.5, "gain": 1.0},
+            "enabled": True,
         }
-        config_bytes = json.dumps(config_data).encode('utf-8')
+        config_bytes = json.dumps(config_data).encode("utf-8")
         qconfig = QConfig(config_bytes, QVersion.v13)
 
         parsed = qconfig.config()
@@ -235,9 +233,7 @@ class TestPerformance:
         """Test config parsing is reasonably fast."""
         import time
 
-        config_data = json.dumps({
-            f"key_{i}": i for i in range(100)
-        }).encode('utf-8')
+        config_data = json.dumps({f"key_{i}": i for i in range(100)}).encode("utf-8")
 
         start = time.time()
         for _ in range(100):

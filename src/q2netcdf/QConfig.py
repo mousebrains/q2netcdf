@@ -9,6 +9,7 @@ import json
 from typing import Union, Optional
 from .QVersion import QVersion
 
+
 class QConfig:
     """
     Parser for Q-file configuration records.

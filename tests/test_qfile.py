@@ -1,4 +1,5 @@
 """Tests for QFile reader."""
+
 import pytest
 from pathlib import Path
 from q2netcdf.QFile import QFile
@@ -81,10 +82,12 @@ class TestQFile:
             hdr = qf.header()
             record = next(qf.data())
 
-            assert len(record.channels) == hdr.Nc, \
+            assert len(record.channels) == hdr.Nc, (
                 f"Expected {hdr.Nc} channels, got {len(record.channels)}"
+            )
 
             if hdr.Ns > 0 and hdr.Nf > 0:
                 expected_shape = (hdr.Ns, hdr.Nf)
-                assert record.spectra.shape == expected_shape, \
+                assert record.spectra.shape == expected_shape, (
                     f"Expected spectra shape {expected_shape}, got {record.spectra.shape}"
+                )

@@ -12,6 +12,7 @@ from .QHeader import QHeader
 from .QHexCodes import QHexCodes
 from .QRecordType import RecordType
 
+
 class QRecord:
     """
     Container for a single Q-file data record.
@@ -25,25 +26,36 @@ class QRecord:
         spectra: 2D array of spectra values [spectra_index, frequency]
     """
 
-    def __init__(self, hdr:QHeader, number:int, err:int, stime:float, etime:float,
-                 items:list) -> None:
+    def __init__(
+        self,
+        hdr: QHeader,
+        number: int,
+        err: int,
+        stime: float,
+        etime: float,
+        items: list,
+    ) -> None:
         self.number = number
         self.error = err
-        self.t0 = (hdr.time +
-                   np.array(stime * 1000).astype("timedelta64[ms]")).astype("datetime64[ns]")
+        self.t0 = (hdr.time + np.array(stime * 1000).astype("timedelta64[ms]")).astype(
+            "datetime64[ns]"
+        )
         if etime is not None:
-            self.t1 = (hdr.time +
-                       np.array(etime * 1000).astype("timedelta64[ms]")).astype("datetime64[ns]")
+            self.t1 = (
+                hdr.time + np.array(etime * 1000).astype("timedelta64[ms]")
+            ).astype("datetime64[ns]")
         else:
             self.t1 = None
 
         # Pre-allocate arrays with correct dtype and shape for better performance
         self.channels = np.empty(hdr.Nc, dtype="f4")
-        self.channels[:] = items[:hdr.Nc]
+        self.channels[:] = items[: hdr.Nc]
 
         if hdr.Ns > 0 and hdr.Nf > 0:
             self.spectra = np.empty((hdr.Ns, hdr.Nf), dtype="f4")
-            self.spectra[:] = np.array(items[hdr.Nc:], dtype="f4").reshape((hdr.Ns, hdr.Nf))
+            self.spectra[:] = np.array(items[hdr.Nc :], dtype="f4").reshape(
+                (hdr.Ns, hdr.Nf)
+            )
         else:
             self.spectra = np.empty((0, 0), dtype="f4")
 
@@ -56,7 +68,7 @@ class QRecord:
         msg.append(f"Spectra: {self.spectra}")
         return "\n".join(msg)
 
-    def split(self, hdr:QHeader) -> tuple:
+    def split(self, hdr: QHeader) -> tuple:
         hexMap = QHexCodes()
         record: Dict[str, Any] = {}
         attrs: Dict[str, Any] = {}
@@ -77,27 +89,27 @@ class QRecord:
         for index in range(hdr.Nc):
             ident = hdr.channels[index]
             name = hexMap.name(ident)
-            if name: 
+            if name:
                 record[name] = self.channels[index]
                 attrs[name] = hexMap.attributes(ident)
 
         for index in range(hdr.Ns):
             ident = hdr.spectra[index]
             name = hexMap.name(ident)
-            if name: 
+            if name:
                 record[name] = self.spectra[index]
                 attrs[name] = hexMap.attributes(ident)
 
         return (record, attrs)
 
-    def prettyRecord(self, hdr:QHeader) -> str:
+    def prettyRecord(self, hdr: QHeader) -> str:
         hexMap = QHexCodes()
         msg = []
 
-        if self.number is not None: 
+        if self.number is not None:
             msg.append(f"Record #: {self.number}")
 
-        if self.error is not None: 
+        if self.error is not None:
             msg.append(f"Error: {self.error}")
 
         if self.t1 is not None:
@@ -116,9 +128,10 @@ class QRecord:
             name = hexMap.name(ident)
             if not name:
                 name = f"{ident:#06x}"
-            msg.append(f"spectra[{name}] = {self.spectra[index,:]}")
+            msg.append(f"spectra[{name}] = {self.spectra[index, :]}")
 
         return "\n".join(msg)
+
 
 class QData:
     """
@@ -128,12 +141,12 @@ class QData:
     based on the header configuration.
     """
 
-    def __init__(self, hdr:QHeader) -> None:
+    def __init__(self, hdr: QHeader) -> None:
         self.__hdr = hdr
         assert hdr.version is not None  # Version is always set in QHeader.__init__
         if hdr.version.isV12():
             self.__format = "<HHqee" + ("e" * hdr.Nc) + ("e" * hdr.Ns * hdr.Nf)
-        else: # >v12
+        else:  # >v12
             self.__format = "<He" + ("e" * hdr.Nc) + ("e" * hdr.Ns * hdr.Nf)
 
     @classmethod
@@ -143,7 +156,7 @@ class QData:
         if len(buffer) != n:
             return None
         (ident,) = struct.unpack("<H", buffer)
-        fp.seek(-n, 1) # Backup n bytes
+        fp.seek(-n, 1)  # Backup n bytes
         return ident == RecordType.DATA.value
 
     def load(self, fp) -> Optional[QRecord]:
@@ -165,10 +178,12 @@ class QData:
             etime = None
 
         if ident != RecordType.DATA.value:
-            logging.warning(f"Data record identifier mismatch, {ident:#06x} != {RecordType.DATA.value:#06x} at byte {fp.tell() - len(buffer)} in {self.__hdr.filename}")
+            logging.warning(
+                f"Data record identifier mismatch, {ident:#06x} != {RecordType.DATA.value:#06x} at byte {fp.tell() - len(buffer)} in {self.__hdr.filename}"
+            )
 
         record = QRecord(hdr, number, err, stime, etime, list(items[offset:]))
         return record
 
-    def prettyRecord(self, record:QRecord) -> str:
+    def prettyRecord(self, record: QRecord) -> str:
         return record.prettyRecord(self.__hdr)

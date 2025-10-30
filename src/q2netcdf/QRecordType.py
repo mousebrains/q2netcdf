@@ -5,6 +5,7 @@
 
 from enum import Enum
 
+
 class RecordType(Enum):
     """
     Q-file binary record type identifiers.
@@ -17,6 +18,7 @@ class RecordType(Enum):
         CONFIG_V12: Configuration record for v1.2 (0x0827) - Beta version only
         DATA: Data record (0x1657) - Contains measurements and spectra
     """
-    HEADER = 0x1729       # Header record with channels, spectra, frequencies
-    CONFIG_V12 = 0x0827   # v1.2 configuration record identifier (beta)
-    DATA = 0x1657         # Data record with measurements
+
+    HEADER = 0x1729  # Header record with channels, spectra, frequencies
+    CONFIG_V12 = 0x0827  # v1.2 configuration record identifier (beta)
+    DATA = 0x1657  # Data record with measurements

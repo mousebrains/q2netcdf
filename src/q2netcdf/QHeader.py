@@ -12,6 +12,7 @@ from .QConfig import QConfig
 from .QVersion import QVersion
 from .QRecordType import RecordType
 
+
 class QHeader:
     """
     Parser for Rockland Scientific Q-file header records.
@@ -34,23 +35,27 @@ class QHeader:
         if len(buffer) != n:
             return None
         (ident,) = struct.unpack("<H", buffer)
-        fp.seek(-n, 1) # Back up n bytes
+        fp.seek(-n, 1)  # Back up n bytes
         return ident == RecordType.HEADER.value
 
-    def __init__(self, fp, fn:str) -> None:
+    def __init__(self, fp, fn: str) -> None:
         self.filename = fn
         hdrSize = 0
 
-        buffer = fp.read(20) # Read fixed header
+        buffer = fp.read(20)  # Read fixed header
         n = len(buffer)
         if n != 20:
             raise EOFError(f"EOF in fixed header, {n} != 20, in {fn}")
         hdrSize += n
 
-        (ident, version, dt, self.Nc, self.Ns, self.Nf) = struct.unpack("<HfQHHH", buffer)
+        (ident, version, dt, self.Nc, self.Ns, self.Nf) = struct.unpack(
+            "<HfQHHH", buffer
+        )
 
         if ident != RecordType.HEADER.value:
-            raise ValueError(f"Invalid header identifer, {ident:#05x} != {RecordType.HEADER.value:#05x}, in {fn}")
+            raise ValueError(
+                f"Invalid header identifer, {ident:#05x} != {RecordType.HEADER.value:#05x}, in {fn}"
+            )
 
         self.version = None
         for v in QVersion:
@@ -66,27 +71,31 @@ class QHeader:
         self.channels: Tuple[int, ...] = ()
         self.spectra: Tuple[int, ...] = ()
 
-        if self.Nc: # Some channel identifiers to read
+        if self.Nc:  # Some channel identifiers to read
             sz = self.Nc * 2
-            buffer = fp.read(sz) # Get channel identifiers
+            buffer = fp.read(sz)  # Get channel identifiers
             n = len(buffer)
             if n != sz:
-                raise EOFError(f"EOF while reading channel identifiers, {n} != {sz}, in {fn}")
+                raise EOFError(
+                    f"EOF while reading channel identifiers, {n} != {sz}, in {fn}"
+                )
             hdrSize += n
             self.channels = struct.unpack("<" + ("H" * self.Nc), buffer)
 
-        if self.Ns: # Some spectra identifiers to read
+        if self.Ns:  # Some spectra identifiers to read
             sz = self.Ns * 2
-            buffer = fp.read(sz) # Get spectra identifiers
+            buffer = fp.read(sz)  # Get spectra identifiers
             n = len(buffer)
             if n != sz:
-                raise EOFError(f"EOF while reading spectra identifiers, {n} != {sz}, in {fn}")
+                raise EOFError(
+                    f"EOF while reading spectra identifiers, {n} != {sz}, in {fn}"
+                )
             hdrSize += n
             self.spectra = struct.unpack("<" + ("H" * self.Ns), buffer)
 
-        if self.Nf: # Some frequencies to read
+        if self.Nf:  # Some frequencies to read
             sz = self.Nf * 2
-            buffer = fp.read(sz) # Get spectra identifiers
+            buffer = fp.read(sz)  # Get spectra identifiers
             n = len(buffer)
             if n != sz:
                 raise EOFError(f"EOF while reading frequencies, {n} != {sz}, in {fn}")
@@ -94,27 +103,31 @@ class QHeader:
             self.frequencies = struct.unpack("<" + ("e" * self.Nf), buffer)
 
         cfgHdrSz = 4 if self.version == QVersion.v12 else 2
-        buffer = fp.read(cfgHdrSz) # Grab configuration record's fixed fields
+        buffer = fp.read(cfgHdrSz)  # Grab configuration record's fixed fields
         n = len(buffer)
         if n != cfgHdrSz:
-            raise EOFError(f"EOF while reading fixed configuration record, {len(buffer)} != {cfgHdrSz} in {fn}")
+            raise EOFError(
+                f"EOF while reading fixed configuration record, {len(buffer)} != {cfgHdrSz} in {fn}"
+            )
         hdrSize += n
 
         if self.version == QVersion.v12:
             # cfgIdent is bad in the beta version of 1.2, should be RecordType.CONFIG_V12
             (cfgIdent, sz) = struct.unpack("<HH", buffer)
         else:
-            (sz, ) = struct.unpack("<H", buffer) # No config ident
+            (sz,) = struct.unpack("<H", buffer)  # No config ident
 
-        if sz: # Some configuration record to read
+        if sz:  # Some configuration record to read
             buffer = fp.read(sz)
             n = len(buffer)
             if n != sz:
-                raise EOFError(f"EOF while reading configuration record, {n} != {sz}, in {fn}")
+                raise EOFError(
+                    f"EOF while reading configuration record, {n} != {sz}, in {fn}"
+                )
             hdrSize += n
             self.config = QConfig(buffer, self.version)
 
-        buffer = fp.read(2) # Get data record size
+        buffer = fp.read(2)  # Get data record size
         n = len(buffer)
         if n != 2:
             raise EOFError(f"EOF while reading data record size, {n} != 2, in {fn}")
@@ -136,6 +149,7 @@ class QHeader:
         msg.append(f"Config:      {self.config}")
         return "\n".join(msg)
 
+
 def main() -> None:
     """Command-line interface for QHeader."""
     from argparse import ArgumentParser
@@ -145,9 +159,15 @@ def main() -> None:
     parser = ArgumentParser()
     parser.add_argument("filename", type=str, nargs="+", help="Input filename(s)")
     parser.add_argument("--config", action="store_false", help="Don't display config")
-    parser.add_argument("--channels", action="store_false", help="Don't display channel names")
-    parser.add_argument("--spectra", action="store_false", help="Don't display spectra names")
-    parser.add_argument("--frequencies", action="store_false", help="Don't display frequencies")
+    parser.add_argument(
+        "--channels", action="store_false", help="Don't display channel names"
+    )
+    parser.add_argument(
+        "--spectra", action="store_false", help="Don't display spectra names"
+    )
+    parser.add_argument(
+        "--frequencies", action="store_false", help="Don't display frequencies"
+    )
     parser.add_argument("--nothing", action="store_true", help="Don't display extra")
     parser.add_argument(
         "--logLevel",
@@ -199,6 +219,7 @@ def main() -> None:
 
             print(f"Data   Record Size: {hdr.dataSize}")
             print(f"Header Record Size: {hdr.hdrSize} config size: {len(hdr.config)}")
+
 
 if __name__ == "__main__":
     main()

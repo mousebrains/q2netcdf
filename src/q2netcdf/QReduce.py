@@ -19,6 +19,7 @@ from .QHexCodes import QHexCodes
 from .QVersion import QVersion
 from .QRecordType import RecordType
 
+
 class QReduce:
     """
     Reduce Q-file size by pruning channels, spectra, and config fields.
@@ -29,12 +30,15 @@ class QReduce:
 
     The reduced file uses v1.3 format regardless of input version.
     """
+
     __name2ident: Dict[str, int] = {}
 
     def __init__(self, filename: str, config: Dict[str, Any]) -> None:
         self.filename = filename
 
-        channelIdents = self.__updateName2Ident(config, "channels") # Get intersecting idents
+        channelIdents = self.__updateName2Ident(
+            config, "channels"
+        )  # Get intersecting idents
         spectraIdents = self.__updateName2Ident(config, "spectra")
 
         with open(filename, "rb") as fp:
@@ -45,11 +49,15 @@ class QReduce:
         channelArray = np.array(hdr.channels, dtype="uint16")
         spectraArray = np.array(hdr.spectra, dtype="uint16")
 
-        (channelIdents, channelIndices) = self.__findIndices(channelIdents, channelArray)
-        (spectraIdents, spectraIndices) = self.__findIndices(spectraIdents, spectraArray)
+        (channelIdents, channelIndices) = self.__findIndices(
+            channelIdents, channelArray
+        )
+        (spectraIdents, spectraIndices) = self.__findIndices(
+            spectraIdents, spectraArray
+        )
 
         qFreq = spectraIndices.size != 0
-        if qFreq: # Some spectra, so build full indices
+        if qFreq:  # Some spectra, so build full indices
             spectraIndices = self.__spectraIndices(hdr, spectraIndices)
             allIndices = np.concatenate((channelIndices, spectraIndices))
         else:
@@ -57,10 +65,9 @@ class QReduce:
 
         body = struct.pack("<Hf", RecordType.HEADER.value, QVersion.v13.value)
         body += np.array(hdr.dtBinary, dtype="uint64").tobytes()
-        body += struct.pack("<HHH", 
-                            len(channelIdents), 
-                            len(spectraIdents),
-                            hdr.Nf if qFreq else 0)
+        body += struct.pack(
+            "<HHH", len(channelIdents), len(spectraIdents), hdr.Nf if qFreq else 0
+        )
         body += channelIdents.astype("<u2").tobytes()
         if qFreq:
             body += spectraIdents.astype("<u2").tobytes()
@@ -96,11 +103,11 @@ class QReduce:
 
     def __repr__(self) -> str:
         msgs = [
-                f"fn {self.filename}",
-                f"hdr {self.hdrSizeOrig} -> {self.hdrSize}",
-                f"data {self.dataSizeOrig} -> {self.dataSize}",
-                f"file {self.fileSizeOrig} -> {self.fileSize}",
-                ]
+            f"fn {self.filename}",
+            f"hdr {self.hdrSizeOrig} -> {self.hdrSize}",
+            f"data {self.dataSizeOrig} -> {self.dataSize}",
+            f"file {self.fileSizeOrig} -> {self.fileSize}",
+        ]
         return ", ".join(msgs)
 
     @classmethod
@@ -127,14 +134,16 @@ class QReduce:
 
     @staticmethod
     def __spectraIndices(hdr: QHeader, indices: np.ndarray) -> np.ndarray:
-        Nf = hdr.Nf # Number of frequencies
+        Nf = hdr.Nf  # Number of frequencies
         indices = indices.reshape(-1, 1)
         freq = np.arange(Nf, dtype="uint16").reshape(1, -1)
         indices = hdr.Nc + (indices * Nf + freq)
         return indices.flatten()
 
     @staticmethod
-    def __findIndices(idents: Optional[np.ndarray], known: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    def __findIndices(
+        idents: Optional[np.ndarray], known: np.ndarray
+    ) -> Tuple[np.ndarray, np.ndarray]:
         if idents is None:
             return (np.array([], dtype=int), np.array([], dtype=int))
 
@@ -143,7 +152,9 @@ class QReduce:
         return (idents[ix], iRHS[ix])
 
     @classmethod
-    def __updateName2Ident(cls, config: Dict[str, Any], key: str) -> Optional[np.ndarray]:
+    def __updateName2Ident(
+        cls, config: Dict[str, Any], key: str
+    ) -> Optional[np.ndarray]:
         if not isinstance(config, dict):
             return None
         if key not in config or not isinstance(config[key], list):
@@ -169,7 +180,7 @@ class QReduce:
         if len(buffer) != self.dataSizeOrig:
             return None
 
-        record = buffer[:2] + buffer[12:14] # Ident + stime
+        record = buffer[:2] + buffer[12:14]  # Ident + stime
         data = np.frombuffer(buffer, dtype="<f2", offset=16)
         data = data[self.__indices]
         record += data.tobytes()
@@ -186,7 +197,7 @@ class QReduce:
             Total bytes written
         """
         with open(self.filename, "rb") as ifp:
-            ifp.seek(self.hdrSizeOrig) # Skip the header
+            ifp.seek(self.hdrSizeOrig)  # Skip the header
             totSize = ofp.write(self.__header)
             while True:
                 data = ifp.read(self.dataSizeOrig)
@@ -209,7 +220,7 @@ class QReduce:
             Total bytes written
         """
         with open(self.filename, "rb") as ifp:
-            ifp.seek(self.hdrSizeOrig) # Skip the header
+            ifp.seek(self.hdrSizeOrig)  # Skip the header
             totSize = ofp.write(self.__header)
             for index in indices:
                 ifp.seek(self.hdrSizeOrig + index * self.dataSizeOrig)
@@ -219,6 +230,7 @@ class QReduce:
                     totSize += ofp.write(record)
             return totSize
 
+
 def __chkExists(filename: str) -> str:
     """Validate that file exists for argparse."""
     from argparse import ArgumentTypeError
@@ -227,6 +239,7 @@ def __chkExists(filename: str) -> str:
         return filename
     raise ArgumentTypeError(f"{filename} does not exist")
 
+
 def main() -> None:
     """Command-line interface for QReduce."""
     from argparse import ArgumentParser
@@ -234,15 +247,19 @@ def main() -> None:
     parser = ArgumentParser(description="Reduce the size of a Q-file")
     parser.add_argument("filename", type=__chkExists, help="Q-file to reduce")
     parser.add_argument("--output", type=str, help="Output file name")
-    parser.add_argument("--config", type=__chkExists, default="mergeqfiles.cfg",
-                        help="JSON configuration file")
+    parser.add_argument(
+        "--config",
+        type=__chkExists,
+        default="mergeqfiles.cfg",
+        help="JSON configuration file",
+    )
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
     args.filename = os.path.abspath(os.path.expanduser(args.filename))
 
-    qrConfig = QReduce.loadConfig(args.config) # Do this once per file
+    qrConfig = QReduce.loadConfig(args.config)  # Do this once per file
     if qrConfig is None:
         logging.error(f"Failed to load config from {args.config}")
         return
@@ -253,6 +270,7 @@ def main() -> None:
         args.output = os.path.abspath(os.path.expanduser(args.output))
         with open(args.output, "ab") as fp:
             qr.reduceFile(fp)
+
 
 if __name__ == "__main__":
     main()

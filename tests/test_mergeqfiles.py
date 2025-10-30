@@ -10,6 +10,7 @@ import json
 
 # Import from mergeqfiles (standalone module)
 import sys
+
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 from q2netcdf.mergeqfiles import (
     RecordType,
@@ -79,39 +80,39 @@ class TestQConfig:
         assert isinstance(result, int)
 
     def test_parse_value_float(self):
-        config_data = b'{}'
+        config_data = b"{}"
         qc = QConfig(config_data, QVersion.v13)
         result = qc._QConfig__parseValue("3.14")
         assert result == 3.14
         assert isinstance(result, float)
 
     def test_parse_value_string(self):
-        config_data = b'{}'
+        config_data = b"{}"
         qc = QConfig(config_data, QVersion.v13)
         result = qc._QConfig__parseValue('"hello"')
         assert result == "hello"
 
     def test_parse_value_bool_true(self):
-        config_data = b'{}'
+        config_data = b"{}"
         qc = QConfig(config_data, QVersion.v13)
         result = qc._QConfig__parseValue("true")
         assert result is True
 
     def test_parse_value_bool_false(self):
-        config_data = b'{}'
+        config_data = b"{}"
         qc = QConfig(config_data, QVersion.v13)
         result = qc._QConfig__parseValue("false")
         assert result is False
 
     def test_parse_value_array_empty(self):
-        config_data = b'{}'
+        config_data = b"{}"
         qc = QConfig(config_data, QVersion.v13)
         result = qc._QConfig__parseValue("[]")
         assert isinstance(result, np.ndarray)
         assert len(result) == 0
 
     def test_parse_value_array_numbers(self):
-        config_data = b'{}'
+        config_data = b"{}"
         qc = QConfig(config_data, QVersion.v13)
         result = qc._QConfig__parseValue("[1, 2, 3]")
         assert isinstance(result, np.ndarray)
@@ -187,7 +188,7 @@ class TestQReduce:
         cfg_data = {
             "config": ["key1", "key2"],
             "channels": ["sh_1", "T_1"],
-            "spectra": []
+            "spectra": [],
         }
         cfg_file.write_text(json.dumps(cfg_data))
         config = QReduce.loadConfig(str(cfg_file))
@@ -236,6 +237,7 @@ class TestChkExists:
 
     def test_not_exists(self):
         from argparse import ArgumentTypeError
+
         with pytest.raises(ArgumentTypeError):
             __chkExists("/nonexistent/file.q")
 
@@ -245,6 +247,7 @@ class TestFileCandidates:
 
     def test_no_qfiles(self, tmp_path):
         from argparse import Namespace
+
         args = Namespace(datadir=str(tmp_path))
         times = np.array([0, 1000])
 

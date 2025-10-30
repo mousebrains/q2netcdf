@@ -5,6 +5,7 @@
 
 from enum import Enum
 
+
 class QVersion(Enum):
     """
     Q-File format versions.
@@ -16,8 +17,9 @@ class QVersion(Enum):
         v12: Version 1.2 - Documented in Rockland's TN-054
         v13: Version 1.3 - Reduced redundancy version of v1.2
     """
-    v12 = 1.2 # Documented in Rockland's TN054
-    v13 = 1.3 # My reduced redundancy version of v1.2
+
+    v12 = 1.2  # Documented in Rockland's TN054
+    v13 = 1.3  # My reduced redundancy version of v1.2
 
     def isV12(self) -> bool:
         """Check if this is version 1.2."""
