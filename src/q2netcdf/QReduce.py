@@ -13,7 +13,7 @@ import logging
 import struct
 import os
 import numpy as np
-from typing import Any, Dict, Optional, Tuple, Union, IO
+from typing import Any, Dict, Optional, Tuple, IO
 from .QHeader import QHeader
 from .QHexCodes import QHexCodes
 from .QVersion import QVersion

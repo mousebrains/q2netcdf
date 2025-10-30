@@ -4,9 +4,6 @@
 # Mar-2025, Claude Code Assistant
 
 import pytest
-import os
-import tempfile
-import struct
 import numpy as np
 from pathlib import Path
 import json
@@ -19,7 +16,6 @@ from q2netcdf.mergeqfiles import (
     QVersion,
     QConfig,
     QHexCodes,
-    QHeader,
     QReduce,
     glueFiles,
     fileCandidates,

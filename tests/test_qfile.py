@@ -57,7 +57,7 @@ class TestQFile:
             pytest.skip("sample.q not found")
 
         with QFile(str(sample_file)) as qf:
-            hdr = qf.header()
+            _ = qf.header()  # Must read header before data
             record_count = 0
             max_records = 5  # Read first 5 records
 

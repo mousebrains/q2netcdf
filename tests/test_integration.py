@@ -4,8 +4,6 @@
 # Mar-2025, Claude Code Assistant
 
 import pytest
-import os
-import tempfile
 import struct
 import numpy as np
 from pathlib import Path
@@ -82,7 +80,7 @@ class TestQFileIntegration:
     def test_read_qfile_data_records(self, sample_qfile):
         """Test reading Q-file data records."""
         with QFile(str(sample_qfile)) as qf:
-            header = qf.header()
+            _ = qf.header()  # Must read header before data
             records = list(qf.data())
             assert len(records) == 5
 
@@ -143,7 +141,6 @@ class TestEndToEndWorkflow:
         """Test a complete create->read->modify workflow."""
         # This would be expanded with actual Q-file creation
         # For now, verify the components work together
-        qhex = QHexCodes()
 
         # Verify we can map various sensor types
         pressure_name = QHexCodes.name(0x160)

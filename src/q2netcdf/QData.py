@@ -7,7 +7,7 @@
 import struct
 import numpy as np
 import logging
-from typing import Any, Optional, Tuple, Dict
+from typing import Any, Optional, Dict
 from .QHeader import QHeader
 from .QHexCodes import QHexCodes
 from .QRecordType import RecordType

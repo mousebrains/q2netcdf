@@ -1,5 +1,4 @@
 """Tests for QVersion enum."""
-import pytest
 from q2netcdf.QVersion import QVersion
 
 

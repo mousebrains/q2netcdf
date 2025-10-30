@@ -6,7 +6,7 @@
 
 import os.path
 import logging
-from typing import Generator, Any, Optional, Union, Dict
+from typing import Generator, Any, Optional, Dict
 from .QHeader import QHeader
 from .QData import QData, QRecord
 

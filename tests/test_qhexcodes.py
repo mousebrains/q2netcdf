@@ -1,5 +1,4 @@
 """Tests for QHexCodes identifier mapping."""
-import pytest
 from q2netcdf.QHexCodes import QHexCodes
 
 
