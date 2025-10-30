@@ -108,6 +108,32 @@ jobs:
         mypy src/q2netcdf/ --show-error-codes
       continue-on-error: true
 
+  test-mergeqfiles-legacy:
+    name: Test mergeqfiles.py on Python ${{ matrix.python-version }}
+    runs-on: ubuntu-20.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.7', '3.8']
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install minimal dependencies for mergeqfiles
+      run: |
+        python -m pip install --upgrade pip
+        pip install numpy pytest
+
+    - name: Test mergeqfiles.py standalone
+      run: |
+        python -m pytest tests/test_mergeqfiles.py -v
+
   coverage-report:
     name: Coverage Report Summary
     needs: test
