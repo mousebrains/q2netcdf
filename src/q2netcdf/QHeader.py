@@ -7,7 +7,6 @@
 import struct
 import logging
 import numpy as np
-from typing import Optional, Tuple
 from .QConfig import QConfig
 from .QVersion import QVersion
 from .QRecordType import RecordType
@@ -29,7 +28,7 @@ class QHeader:
     """
 
     @classmethod
-    def chkIdent(cls, fp) -> Optional[bool]:
+    def chkIdent(cls, fp) -> bool | None:
         n = 2
         buffer = fp.read(n)
         if len(buffer) != n:
@@ -68,8 +67,8 @@ class QHeader:
         self.dtBinary = dt
         self.time = np.datetime64("0000-01-01") + np.timedelta64(dt, "ms")
 
-        self.channels: Tuple[int, ...] = ()
-        self.spectra: Tuple[int, ...] = ()
+        self.channels: tuple[int, ...] = ()
+        self.spectra: tuple[int, ...] = ()
 
         if self.Nc:  # Some channel identifiers to read
             sz = self.Nc * 2

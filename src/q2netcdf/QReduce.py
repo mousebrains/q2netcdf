@@ -13,7 +13,7 @@ import logging
 import struct
 import os
 import numpy as np
-from typing import Any, Dict, Optional, Tuple, IO
+from typing import Any, IO
 from .QHeader import QHeader
 from .QHexCodes import QHexCodes
 from .QVersion import QVersion
@@ -31,9 +31,9 @@ class QReduce:
     The reduced file uses v1.3 format regardless of input version.
     """
 
-    __name2ident: Dict[str, int] = {}
+    __name2ident: dict[str, int] = {}
 
-    def __init__(self, filename: str, config: Dict[str, Any]) -> None:
+    def __init__(self, filename: str, config: dict[str, Any]) -> None:
         self.filename = filename
 
         channelIdents = self.__updateName2Ident(
@@ -73,7 +73,7 @@ class QReduce:
             body += spectraIdents.astype("<u2").tobytes()
             body += np.array(hdr.frequencies).astype("<f2").tobytes()
 
-        myConfig: Dict[str, Any] = {}
+        myConfig: dict[str, Any] = {}
         if isinstance(config, dict) and "config" in config:
             hdrConfig = hdr.config.config()
             for name in config["config"]:
@@ -111,7 +111,7 @@ class QReduce:
         return ", ".join(msgs)
 
     @classmethod
-    def loadConfig(cls, filename: str) -> Optional[Dict[str, Any]]:
+    def loadConfig(cls, filename: str) -> dict[str, Any] | None:
         if os.path.isfile(filename):
             try:
                 with open(filename, "r") as fp:
@@ -142,8 +142,8 @@ class QReduce:
 
     @staticmethod
     def __findIndices(
-        idents: Optional[np.ndarray], known: np.ndarray
-    ) -> Tuple[np.ndarray, np.ndarray]:
+        idents: np.ndarray | None, known: np.ndarray
+    ) -> tuple[np.ndarray, np.ndarray]:
         if idents is None:
             return (np.array([], dtype=int), np.array([], dtype=int))
 
@@ -152,9 +152,7 @@ class QReduce:
         return (idents[ix], iRHS[ix])
 
     @classmethod
-    def __updateName2Ident(
-        cls, config: Dict[str, Any], key: str
-    ) -> Optional[np.ndarray]:
+    def __updateName2Ident(cls, config: dict[str, Any], key: str) -> np.ndarray | None:
         if not isinstance(config, dict):
             return None
         if key not in config or not isinstance(config[key], list):
@@ -162,7 +160,7 @@ class QReduce:
 
         idents = []
         for name in config[key]:
-            ident: Optional[int]
+            ident: int | None
             if name in cls.__name2ident:
                 ident = cls.__name2ident[name]
             else:
@@ -176,7 +174,7 @@ class QReduce:
 
         return np.array(idents, dtype="uint16")
 
-    def __reduceRecord(self, buffer: bytes) -> Optional[bytes]:
+    def __reduceRecord(self, buffer: bytes) -> bytes | None:
         if len(buffer) != self.dataSizeOrig:
             return None
 

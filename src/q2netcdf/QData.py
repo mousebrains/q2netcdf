@@ -7,7 +7,7 @@
 import struct
 import numpy as np
 import logging
-from typing import Any, Optional, Dict
+from typing import Any
 from .QHeader import QHeader
 from .QHexCodes import QHexCodes
 from .QRecordType import RecordType
@@ -33,7 +33,7 @@ class QRecord:
         err: int,
         stime: float,
         etime: float,
-        items: list,
+        items: list[float],
     ) -> None:
         self.number = number
         self.error = err
@@ -68,10 +68,10 @@ class QRecord:
         msg.append(f"Spectra: {self.spectra}")
         return "\n".join(msg)
 
-    def split(self, hdr: QHeader) -> tuple:
+    def split(self, hdr: QHeader) -> tuple[dict[str, Any], dict[str, Any]]:
         hexMap = QHexCodes()
-        record: Dict[str, Any] = {}
-        attrs: Dict[str, Any] = {}
+        record: dict[str, Any] = {}
+        attrs: dict[str, Any] = {}
 
         record["time"] = self.t0
         attrs["time"] = {"long_name": "time"}
@@ -150,7 +150,7 @@ class QData:
             self.__format = "<He" + ("e" * hdr.Nc) + ("e" * hdr.Ns * hdr.Nf)
 
     @classmethod
-    def chkIdent(cls, fp) -> Optional[bool]:
+    def chkIdent(cls, fp) -> bool | None:
         n = 2
         buffer = fp.read(n)
         if len(buffer) != n:
@@ -159,7 +159,7 @@ class QData:
         fp.seek(-n, 1)  # Backup n bytes
         return ident == RecordType.DATA.value
 
-    def load(self, fp) -> Optional[QRecord]:
+    def load(self, fp) -> QRecord | None:
         hdr = self.__hdr
         buffer = fp.read(hdr.dataSize)
         if len(buffer) != hdr.dataSize:

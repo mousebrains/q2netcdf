@@ -13,12 +13,12 @@ import xarray as xr
 import logging
 import sys
 import struct
-from typing import Any, Dict, Optional
+from typing import Any
 from .QHeader import QHeader
 from .QData import QData
 
 
-def loadQfile(fn: str) -> Optional[xr.Dataset]:
+def loadQfile(fn: str) -> xr.Dataset | None:
     """
     Load a Q-file and convert it to an xarray Dataset.
 
@@ -30,8 +30,8 @@ def loadQfile(fn: str) -> Optional[xr.Dataset]:
         and spectra, or None if file is invalid/empty
     """
     records = []
-    hdr: Optional[QHeader] = None
-    data: Optional[QData] = None
+    hdr: QHeader | None = None
+    data: QData | None = None
 
     with open(fn, "rb") as fp:
         while True:
@@ -44,14 +44,14 @@ def loadQfile(fn: str) -> Optional[xr.Dataset]:
                 assert data is not None, "Data cannot be read before header"
                 assert hdr is not None, "Header must exist before data"
 
-                record = data.load(fp)
-                if record is None:
+                qrecord = data.load(fp)
+                if qrecord is None:
                     break  # EOF
-                [record, attrs] = record.split(hdr)
+                record, attrs = qrecord.split(hdr)
                 qFreq = False
                 t0 = record["time"]
                 del record["time"]
-                values: Dict[str, Any] = {}
+                values: dict[str, Any] = {}
                 qFreq = False
                 for key in record:
                     val = record[key]
@@ -68,7 +68,7 @@ def loadQfile(fn: str) -> Optional[xr.Dataset]:
                             val.reshape(1, -1),
                             attrs[key] if key in attrs else None,
                         )
-                coords: dict = {"time": [t0]}
+                coords: dict[str, Any] = {"time": [t0]}
                 if qFreq:
                     coords["freq"] = list(hdr.frequencies)
                 ds = xr.Dataset(data_vars=values, coords=coords)
@@ -98,7 +98,7 @@ def loadQfile(fn: str) -> Optional[xr.Dataset]:
     ds = ds.assign_coords(ftime=[ftime], despike=np.arange(3))
 
     assert hdr.version is not None  # Version is always set in QHeader.__init__
-    toAdd: Dict[str, Any] = dict(fileversion=("ftime", [hdr.version.value]))
+    toAdd: dict[str, Any] = dict(fileversion=("ftime", [hdr.version.value]))
 
     config = hdr.config.config()
     for key in config:

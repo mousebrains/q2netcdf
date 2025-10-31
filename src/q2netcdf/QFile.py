@@ -6,7 +6,7 @@
 
 import os.path
 import logging
-from typing import Generator, Any, Optional, Dict
+from typing import Generator, Any, BinaryIO
 from .QHeader import QHeader
 from .QData import QData, QRecord
 
@@ -39,8 +39,8 @@ class QFile:
             FileNotFoundError: If the file does not exist
         """
         self.__fn = os.path.abspath(os.path.expanduser(fn))
-        self.__fp = None
-        self.__data: Optional[QData] = None
+        self.__fp: BinaryIO | None = None
+        self.__data: QData | None = None
 
         if not os.path.isfile(self.__fn):
             raise FileNotFoundError(f"{self.__fn} does not exist")
@@ -101,7 +101,7 @@ class QFile:
                 break
             yield record
 
-    def prettyRecord(self, record: QRecord) -> Optional[str]:
+    def prettyRecord(self, record: QRecord) -> str | None:
         """
         Format a QRecord as a human-readable string.
 
@@ -113,7 +113,7 @@ class QFile:
         """
         return self.__data.prettyRecord(record) if self.__data else None
 
-    def validate(self) -> Dict[str, Any]:
+    def validate(self) -> dict[str, Any]:
         """
         Validate Q-file integrity and return diagnostic information.
 
@@ -128,7 +128,7 @@ class QFile:
         """
         from .QHexCodes import QHexCodes
 
-        results: Dict[str, Any] = {
+        results: dict[str, Any] = {
             "valid": True,
             "version": None,
             "records_readable": 0,
