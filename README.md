@@ -77,9 +77,16 @@ pytest  # Run tests
 
 For deployment on Rockland Scientific MicroRider instruments:
 
-1. Run `mkZip` to create `microrider.zip`
-2. Transfer `microrider.zip` to the MicroRider
-3. Unzip: `unzip -o -d /usr/local/bin microrider.zip`
+1. Transfer [src/q2netcdf/microrider.py](microrider.py) [src/q2netcdf/microrider.cfg](microrider.cfg) to the MicroRider's data directory.
+2. Dismount the data directory on your host computer.
+3. Connect to the MicroRider via a serial connection using your favorite terminal emulator at 115,200 baud.
+4. `ls data` to verify the files are present. This will cause the MicroRider to unmount data from being read-only to the MicroRider and then remount it as read-write. This will typically cause the serial connection to drop then be restablished. You might have to restart your terminal emulator's connection.
+5. `mv data/microrider.py /usr/local/bin/mergeqfiles` to install my version of microrider.py as mergeqfiles.
+6. Test with `mergeqfiles --help` to make sure the installation was successful.
+7. You can disconnect the MicroRider's serial connection.
+8. You should now run a simulation on the Slocum glider to verify Q-files are being uploaded to the science computer's storage as .mri files.
+9. Diagnostic information is written into the data/mergeqfiles.log file on the MicroRider.
+10. You can modify data/mergeqfiles.cfg to adjust the information included in the .mri file sent to the glider.
 
 This is designed for integration with [TWR's Slocum Glider uRider proglet](https://www.teledynemarine.com/brands/webb-research/slocum-glider).
 
