@@ -80,7 +80,7 @@ For deployment on Rockland Scientific MicroRider instruments:
 1. Transfer [src/q2netcdf/microrider.py](microrider.py) [src/q2netcdf/microrider.cfg](microrider.cfg) to the MicroRider's data directory.
 2. Dismount the data directory on your host computer.
 3. Connect to the MicroRider via a serial connection using your favorite terminal emulator at 115,200 baud.
-4. `ls data` to verify the files are present. This will cause the MicroRider to unmount data from being read-only to the MicroRider and then remount it as read-write. This will typically cause the serial connection to drop then be restablished. You might have to restart your terminal emulator's connection.
+4. `ls data` to verify the files are present. This will cause the MicroRider to unmount data from being read-only to the MicroRider and then remount it as read-write. This will typically cause the serial connection to drop then be reestablished. You might have to restart your terminal emulator's connection.
 5. `mv data/microrider.py /usr/local/bin/mergeqfiles` to install my version of microrider.py as mergeqfiles.
 6. Test with `mergeqfiles --help` to make sure the installation was successful.
 7. You can disconnect the MicroRider's serial connection.
@@ -147,7 +147,7 @@ Q-files are binary files containing oceanographic data from Rockland Scientific 
 
 ## Contributing
 
-Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+Contributions are welcome! Please see [CONTRIBUTING.md](documents/CONTRIBUTING.md) for guidelines.
 
 ### Development Setup
 
@@ -161,6 +161,15 @@ mypy src/                 # Type check
 ```
 
 To run a module for testing `python3 -m src.q2netcdf.QHeader --help`
+
+## Additional Documentation
+
+- [CHANGELOG.md](documents/CHANGELOG.md) - Version history and changes
+- [CONTRIBUTING.md](documents/CONTRIBUTING.md) - Contributor guidelines and development setup
+- [SECURITY.md](documents/SECURITY.md) - Security policy and vulnerability reporting
+- [IMPROVEMENTS_APPLIED.md](documents/IMPROVEMENTS_APPLIED.md) - Recent improvements and updates
+- [CLAUDE.md](CLAUDE.md) - AI assistant guidance for working with this codebase
+- [Development Documentation](docs/development/) - Internal development notes and analysis
 
 ## License
 
