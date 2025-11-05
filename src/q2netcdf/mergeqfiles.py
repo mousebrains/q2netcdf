@@ -1135,7 +1135,10 @@ def reduceAndDecimate(
     ratio = availSize / totDataSize
     if ratio <= 0:
         logging.warning("Not adding to %s since ratio is %s <= 0", ofn, ratio)
-        return ofp.tell()
+        if ofp.seekable():
+            return ofp.tell()
+        st = os.fstat(ofp.fileno())
+        return st.st_size
 
     logging.info("Sizes max %s avail %s ratio %s", maxSize, availSize, ratio)
 
@@ -1161,7 +1164,10 @@ def reduceAndDecimate(
             indices.size,
             qr.nRecords.astype(int),
         )
-    return ofp.tell()
+    if ofp.seekable():
+        return ofp.tell()
+    st = os.fstat(ofp.fileno())
+    return st.st_size
 
 
 def reduceFiles(
@@ -1202,7 +1208,10 @@ def reduceFiles(
                 )
         else:
             reduceAndDecimate(info, ofp, ofn, maxSize)
-        return ofp.tell()  # Actual file size
+        if ofp.seekable():
+            return ofp.tell()  # Actual file size
+        st = os.fstat(ofp.fileno())
+        return st.st_size # for non-seekable files
 
 
 def decimateFiles(qFiles: Dict[str, int], ofn: str, totSize: int, maxSize: int) -> int:
@@ -1291,8 +1300,11 @@ def decimateFiles(qFiles: Dict[str, int], ofn: str, totSize: int, maxSize: int) 
                         if len(buffer) != dataSize:
                             break
                         ofp.write(buffer)
-            fSize = ofp.tell()
-            return fSize
+            if ofp.seekable():
+                return ofp.tell()
+            st = os.fstat(ofp.fileno())
+            return st.st_size
+
     except (OSError, ValueError):
         logging.exception("Unable to decimate %s to %s", filenames, ofn)
         return 0
@@ -1324,7 +1336,11 @@ def glueFiles(filenames: List[str], ofn: str, bufferSize: int = 1024 * 1024) -> 
                             "Appended %s to %s with %s bytes", ifn, ofn, len(buffer)
                         )
                         totSize += len(buffer)
-            fSize = ofp.tell()
+            if ofp.seekable():
+                fSize = ofp.tell()
+            else:
+                st = os.fstat(ofp.fileno())
+                fSize = st.st_size
             logging.info("Glued %s to %s fSize %s", totSize, ofn, fSize)
             return fSize
     except OSError:
