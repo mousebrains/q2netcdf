@@ -1211,7 +1211,7 @@ def reduceFiles(
         if ofp.seekable():
             return ofp.tell()  # Actual file size
         st = os.fstat(ofp.fileno())
-        return st.st_size # for non-seekable files
+        return st.st_size  # for non-seekable files
 
 
 def decimateFiles(qFiles: Dict[str, int], ofn: str, totSize: int, maxSize: int) -> int:
