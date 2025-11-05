@@ -7,8 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Removed CI testing for Python 3.7, 3.8, and 3.9 (mergeqfiles.py remains compatible with Python 3.7+, but these versions are no longer actively tested in CI)
+- Updated pre-commit hook versions to latest stable releases
+- Optimized QHexCodes.name2ident() with reverse lookup cache for better performance
+
 ### Added
-- **CI/CD Pipeline**: GitHub Actions workflow testing Python 3.7-3.13 across Linux, macOS, and Windows
+- Coverage badge to README
+- GitHub issue templates for bug reports and feature requests
+- SECURITY.md file with vulnerability reporting instructions
+- Consolidated development documentation in docs/development/ directory
+- **CI/CD Pipeline**: GitHub Actions workflow testing Python 3.10-3.13 across Linux, macOS, and Windows
   - Automated pytest with coverage reporting
   - Ruff linting and formatting checks
   - mypy type checking for all Python versions

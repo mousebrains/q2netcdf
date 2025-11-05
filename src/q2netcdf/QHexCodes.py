@@ -484,8 +484,24 @@ class QHexCodes:
         ],  # Value that shouldn't be here
     }
 
+    # Reverse lookup cache: maps name prefix to hex identifier
+    __reverseMap: dict[str, int] = {}
+
     def __init__(self) -> None:
         pass
+
+    @classmethod
+    def __buildReverseMap(cls) -> None:
+        """Build reverse lookup cache on first use."""
+        if not cls.__reverseMap:
+            for ident, (name, _attrs) in cls.__hexMap.items():
+                # Handle both string names and list names
+                if isinstance(name, str):
+                    cls.__reverseMap[name] = ident
+                elif isinstance(name, (list, tuple)):
+                    # For list/tuple names, we can't do reverse lookup
+                    # because we'd need the specific instance
+                    pass
 
     @classmethod
     def __repr__(cls) -> str:
@@ -572,6 +588,9 @@ class QHexCodes:
         Returns:
             Hexadecimal identifier (e.g., 0x611) or None if not found
         """
+        # Build reverse lookup cache on first use
+        cls.__buildReverseMap()
+
         matches = re.match(r"^(.*_)(\d+)$", name)
         if matches:
             prefix = matches[1]
@@ -580,9 +599,10 @@ class QHexCodes:
             prefix = name
             cnt = 0
 
-        for ident in cls.__hexMap:
-            if cls.__hexMap[ident][0] == prefix:
-                return ident + cnt
+        # Use cached reverse lookup instead of linear search
+        if prefix in cls.__reverseMap:
+            return cls.__reverseMap[prefix] + cnt
+
         logging.warning(f"{name} not found in hexMap")
         return None
 
