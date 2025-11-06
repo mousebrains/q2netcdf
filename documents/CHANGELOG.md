@@ -7,16 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2024-11-05
+
 ### Changed
 - Removed CI testing for Python 3.7, 3.8, and 3.9 (mergeqfiles.py remains compatible with Python 3.7+, but these versions are no longer actively tested in CI)
-- Updated pre-commit hook versions to latest stable releases
-- Optimized QHexCodes.name2ident() with reverse lookup cache for better performance
+- Updated pre-commit hook versions to latest stable releases (ruff 0.8.4, mypy 1.13.0, pre-commit-hooks 5.0.0, bandit 1.8.0)
+- Optimized QHexCodes.name2ident() with reverse lookup cache for O(1) performance
+- Reorganized documentation into `documents/` directory for better project structure
+- Updated minimum Python version in pyproject.toml to 3.10 for main package
+- Improved mergeqfiles.py code quality:
+  - Removed duplicate class definitions (QConfig, RecordType, QVersion)
+  - Consolidated duplicate imports
+  - Reduced file size from 1,478 to 1,344 lines
 
 ### Added
 - Coverage badge to README
 - GitHub issue templates for bug reports and feature requests
-- SECURITY.md file with vulnerability reporting instructions
+- SECURITY.md file with vulnerability reporting instructions and best practices
 - Consolidated development documentation in docs/development/ directory
+- documents/README.md to organize and index all documentation
 - **CI/CD Pipeline**: GitHub Actions workflow testing Python 3.10-3.13 across Linux, macOS, and Windows
   - Automated pytest with coverage reporting
   - Ruff linting and formatting checks
@@ -27,26 +36,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Integration tests for end-to-end workflows (test_integration.py)
 - Performance tests for hex code lookups and config parsing
 - Error handling tests for corrupted files and invalid inputs
-- CHANGELOG.md to track project changes
-- Strict mypy configuration with improved type annotations across all modules
-
-### Changed
-- **BREAKING**: Minimum Python version changed from 3.11 to 3.7
-- Updated type hints across all modules to use Python 3.7-compatible syntax
-  - Changed `X | Y` to `Union[X, Y]`
-  - Changed `X | None` to `Optional[X]`
-  - Changed `dict[K, V]` to `Dict[K, V]`
-  - Changed `tuple[X, ...]` to `Tuple[X, ...]`
-- Relaxed dependency version requirements for broader compatibility:
-  - `numpy`: `>=2.2.1,<3.0.0` → `>=1.17.0`
-  - `netcdf4`: `>=1.7.2,<2.0.0` → `>=1.5.3`
-  - `xarray`: `>=2025.1.1,<2026.0.0` → `>=0.16.0`
-  - `pyyaml`: `>=6.0.0,<7.0.0` → `>=5.1`
-- Improved mergeqfiles.py code quality:
-  - Removed duplicate class definitions (QConfig, RecordType, QVersion)
-  - Consolidated duplicate imports
-  - Reduced file size from 1,478 to 1,344 lines
-- Updated README.md Python version badge from 3.11+ to 3.7+
 
 ### Fixed
 - Type hint compatibility issues with Python 3.7 and 3.8
@@ -55,6 +44,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Missing type annotations in QReduce.py, QFile.py, QHexCodes.py, and q2netcdf.py
 - Untyped function definitions flagged by mypy --strict mode
 - Missing typing imports (Union, Optional, Dict, Tuple, IO) in multiple modules
+- Ruff formatting issue in mergeqfiles.py (inline comment spacing)
+- Typo in README.md: "restablished" → "reestablished"
 
 ## [0.3.0] - 2025-03-15
 
@@ -89,10 +80,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Migration Guides
 
-### Migrating from 0.3.0 to Unreleased
+### Migrating from 0.3.0 to 0.4.0
 
 **Python Version:**
-- Minimum Python version is now 3.7 (was 3.11)
+- Minimum Python version for main package is now 3.10 (was 3.11)
+- mergeqfiles.py standalone tool remains compatible with Python 3.7+
 - If you were using Python 3.11+ features in custom code, you may need to update:
   - Use `Union[X, Y]` instead of `X | Y` for type hints
   - Use `Dict`, `List`, `Tuple` from `typing` module instead of built-in generics
@@ -130,5 +122,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[Unreleased]: https://github.com/mousebrains/q2netcdf/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/mousebrains/q2netcdf/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/mousebrains/q2netcdf/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/mousebrains/q2netcdf/releases/tag/v0.3.0
