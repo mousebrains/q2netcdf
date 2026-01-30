@@ -98,7 +98,7 @@ def loadQfile(fn: str) -> xr.Dataset | None:
     ds = ds.assign_coords(ftime=[ftime], despike=np.arange(3))
 
     assert hdr.version is not None  # Version is always set in QHeader.__init__
-    toAdd: dict[str, Any] = dict(fileversion=("ftime", [hdr.version.value]))
+    toAdd: dict[str, Any] = dict(fileVersion=("ftime", [hdr.version.value]))
 
     config = hdr.config.config()
     for key in config:
@@ -146,14 +146,18 @@ def cfCompliant(ds: xr.Dataset) -> xr.Dataset:
         "fit_order": {"long_name": "fit_order", "units": "1"},
         "freq": {
             "long_name": "frequency",
+            "standard_name": "frequency",
             "units": "Hz",
         },
         "frequency": {
-            "units": "Hz",
             "long_name": "frequency_spectra",
+            "standard_name": "frequency",
+            "units": "Hz",
         },
         "ftime": {
             "long_name": "time_file_start",
+            "standard_name": "time",
+            "units_metadata": "leap_seconds: none",
         },
         "error": {"long_name": "error_code", "units": "1"},
         "goodman_length": {
@@ -171,9 +175,13 @@ def cfCompliant(ds: xr.Dataset) -> xr.Dataset:
         },
         "t1": {
             "long_name": "time_end_of_interval",
+            "standard_name": "time",
+            "units_metadata": "leap_seconds: none",
         },
         "time": {
             "long_name": "time_start_of_interval",
+            "standard_name": "time",
+            "units_metadata": "leap_seconds: none",
         },
         "ucond_despiking": {"long_name": "microconductivity_despiking", "units": "1"},
     }
@@ -182,16 +190,26 @@ def cfCompliant(ds: xr.Dataset) -> xr.Dataset:
         if name in ds:
             ds[name] = ds[name].assign_attrs(known[name])
 
+    now = np.datetime64("now")
+    now_str = str(now)
+    history_entry = f"{now_str} created by q2netcdf"
+    history = ds.attrs.get("history")
+    if history:
+        history = f"{history}\n{history_entry}"
+    else:
+        history = history_entry
+
     ds = ds.assign_attrs(
         dict(
-            Conventions="CF-1.8",
+            Conventions="CF-1.13, CF-1.11",
             title="NetCDF translation of Rockland's Q-File(s)",
             keywords=["turbulence", "ocean"],
             summary="See Rockland's TN-054 for description of Q-Files",
+            history=history,
             time_coverage_start=str(ds.time.data.min()),
             time_coverage_end=str(ds.time.data.max()),
             time_coverage_duration=str(ds.time.data.max() - ds.time.data.min()),
-            date_created=str(np.datetime64("now")),
+            date_created=now_str,
         )
     )
 
@@ -215,7 +233,7 @@ def addEncoding(ds: xr.Dataset, level: int = 5) -> xr.Dataset:
     for name in ds:
         if ds[name].dtype.kind == "U":
             continue
-        ds[name].encoding = {"compression": "zlib", "compression_level": level}
+        ds[name].encoding = {"zlib": True, "complevel": level}
 
     return ds
 

@@ -69,6 +69,8 @@ class QHeader:
 
         self.channels: tuple[int, ...] = ()
         self.spectra: tuple[int, ...] = ()
+        self.frequencies: tuple[float, ...] = ()
+        self.config = QConfig(b"{}", self.version)
 
         if self.Nc:  # Some channel identifiers to read
             sz = self.Nc * 2

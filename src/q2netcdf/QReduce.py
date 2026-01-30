@@ -44,6 +44,8 @@ class QReduce:
         with open(filename, "rb") as fp:
             hdr = QHeader(fp, filename)
             self.fileSizeOrig = os.fstat(fp.fileno()).st_size
+        assert hdr.version is not None
+        self.__version = hdr.version
 
         # Convert tuples to ndarrays for processing
         channelArray = np.array(hdr.channels, dtype="uint16")
@@ -178,8 +180,15 @@ class QReduce:
         if len(buffer) != self.dataSizeOrig:
             return None
 
-        record = buffer[:2] + buffer[12:14]  # Ident + stime
-        data = np.frombuffer(buffer, dtype="<f2", offset=16)
+        if self.__version.isV12():
+            stime = buffer[12:14]
+            data_offset = 16
+        else:
+            stime = buffer[2:4]
+            data_offset = 4
+
+        record = buffer[:2] + stime  # Ident + stime (v1.3 reduced format)
+        data = np.frombuffer(buffer, dtype="<f2", offset=data_offset)
         data = data[self.__indices]
         record += data.tobytes()
         return record
