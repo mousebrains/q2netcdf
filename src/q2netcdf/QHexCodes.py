@@ -549,7 +549,8 @@ class QHexCodes:
         if item is None:
             return None
 
-        assert cnt is not None  # __findIdent returns both None or both non-None
+        if cnt is None:
+            raise RuntimeError("__findIdent returned item without cnt")
         name = item[0]
         return cls.__fixName(name, cnt)
 
@@ -568,7 +569,8 @@ class QHexCodes:
         if item is None:
             return None
 
-        assert cnt is not None  # __findIdent returns both None or both non-None
+        if cnt is None:
+            raise RuntimeError("__findIdent returned item without cnt")
         attrs = item[1].copy()  # In case I modify it
 
         for attr in attrs:

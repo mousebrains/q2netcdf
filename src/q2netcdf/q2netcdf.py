@@ -96,7 +96,8 @@ def loadQfile(fn: str) -> xr.Dataset | None:
     ftime = ds.time.data.min()
     ds = ds.assign_coords(ftime=[ftime], despike=np.arange(3))
 
-    assert hdr.version is not None  # Version is always set in QHeader.__init__
+    if hdr.version is None:
+        raise RuntimeError("QHeader.version must be set after reading header")
     toAdd: dict[str, Any] = dict(fileVersion=("ftime", [hdr.version.value]))
 
     config = hdr.config.config()
@@ -137,15 +138,28 @@ def mergeDatasets(frames: list[xr.Dataset]) -> xr.Dataset:
     if len(frames) == 1:
         return frames[0]
 
-    time_vars = [n for n in frames[0].data_vars if "time" in frames[0][n].dims]
-    ftime_vars = [n for n in frames[0].data_vars if "ftime" in frames[0][n].dims]
+    time_vars: set[str] = set()
+    ftime_vars: set[str] = set()
+    for f in frames:
+        for n in f.data_vars:
+            name = str(n)
+            if "time" in f[name].dims:
+                time_vars.add(name)
+            if "ftime" in f[name].dims:
+                ftime_vars.add(name)
 
     time_frames = [
-        f[time_vars].drop_vars(["ftime", "despike"], errors="ignore") for f in frames
+        f[[v for v in time_vars if v in f]].drop_vars(
+            ["ftime", "despike"], errors="ignore"
+        )
+        for f in frames
     ]
-    ftime_frames = [f[ftime_vars].assign_coords(ftime=f.ftime) for f in frames]
+    ftime_frames = [
+        f[[v for v in ftime_vars if v in f]].assign_coords(ftime=f.ftime)
+        for f in frames
+    ]
 
-    ds_time = xr.concat(time_frames, "time")
+    ds_time = xr.concat(time_frames, "time", join="outer")
     ds_ftime = xr.concat(ftime_frames, "ftime")
     ds_ftime = ds_ftime.assign_coords(despike=np.arange(3))
     return xr.merge([ds_time, ds_ftime])
@@ -298,13 +312,17 @@ def main() -> None:
 
     frames = []
     for fn in args.qfile:
-        ds = loadQfile(fn)
+        try:
+            ds = loadQfile(fn)
+        except Exception:
+            logging.exception("Failed to load %s", fn)
+            continue
         if ds is not None:
             frames.append(ds)
 
     if not frames:  # Empty
-        logging.info("No data found")
-        sys.exit(0)
+        logging.warning("No data found in any input file")
+        sys.exit(1)
 
     ds = mergeDatasets(frames)
 

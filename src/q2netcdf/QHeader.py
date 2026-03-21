@@ -57,6 +57,11 @@ class QHeader:
             "<HfQHHH", buffer
         )
 
+        if self.Nc > 1024 or self.Ns > 1024 or self.Nf > 65536:
+            raise ValueError(
+                f"Suspect header counts Nc={self.Nc}, Ns={self.Ns}, Nf={self.Nf} in {fn}"
+            )
+
         if ident != RecordType.HEADER.value:
             raise ValueError(
                 f"Invalid header identifer, {ident:#05x} != {RecordType.HEADER.value:#05x}, in {fn}"
@@ -112,7 +117,8 @@ class QHeader:
 
     def _read_config(self, fp: BinaryIO, fn: str) -> int:
         """Read the configuration record (v1.2 or v1.3 format)."""
-        assert self.version is not None  # Validated in __init__ before this call
+        if self.version is None:
+            raise RuntimeError("QHeader.version must be set before reading config")
         bytesRead = 0
         self.config = QConfig(b"{}", self.version)
 

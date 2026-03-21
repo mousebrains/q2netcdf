@@ -44,7 +44,10 @@ class QReduce:
         with open(filename, "rb") as fp:
             hdr = QHeader(fp, filename)
             self.fileSizeOrig = os.fstat(fp.fileno()).st_size
-        assert hdr.version is not None
+        if hdr.version is None:
+            raise RuntimeError(
+                "QHeader.version must be set before constructing QReduce"
+            )
         self.__version = hdr.version
 
         # Convert tuples to ndarrays for processing

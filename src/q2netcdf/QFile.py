@@ -91,15 +91,16 @@ class QFile:
             QRecord objects containing time, channels, and spectra data
 
         Raises:
-            EOFError: If header() has not been called yet
+            RuntimeError: If header() has not been called yet
         """
         if not self.__data:
-            raise EOFError(
+            raise RuntimeError(
                 f"A header must be read before any data records in {self.__fn}"
             )
 
         fp = self.__fp
-        assert fp is not None  # Guaranteed by header() call above
+        if fp is None:
+            raise RuntimeError("File pointer is not open")
         while True:
             if QHeader.chkIdent(fp):
                 hdr = QHeader(fp, self.__fn)

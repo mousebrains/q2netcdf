@@ -95,6 +95,12 @@ class QRecord:
             if name:
                 record[name] = self.channels[index]
                 attrs[name] = hexMap.attributes(ident)
+            else:
+                logging.warning(
+                    "Unknown channel identifier %#06x at index %d, skipping",
+                    ident,
+                    index,
+                )
 
         for index in range(hdr.Ns):
             ident = hdr.spectra[index]
@@ -102,6 +108,12 @@ class QRecord:
             if name:
                 record[name] = self.spectra[index]
                 attrs[name] = hexMap.attributes(ident)
+            else:
+                logging.warning(
+                    "Unknown channel identifier %#06x at index %d, skipping",
+                    ident,
+                    index,
+                )
 
         return (record, attrs)
 
@@ -146,7 +158,8 @@ class QData:
 
     def __init__(self, hdr: QHeader) -> None:
         self.__hdr = hdr
-        assert hdr.version is not None  # Version is always set in QHeader.__init__
+        if hdr.version is None:
+            raise RuntimeError("QHeader.version must be set before constructing QData")
         if hdr.version.isV12():
             self.__format = "<HHqee" + ("e" * hdr.Nc) + ("e" * hdr.Ns * hdr.Nf)
         else:  # >v12
@@ -166,10 +179,26 @@ class QData:
         hdr = self.__hdr
         buffer = fp.read(hdr.dataSize)
         if len(buffer) != hdr.dataSize:
+            if len(buffer) > 0:
+                logging.warning(
+                    "Truncated data record: got %d bytes, expected %d in %s",
+                    len(buffer),
+                    hdr.dataSize,
+                    hdr.filename,
+                )
             return None  # EOF while reading
 
-        items = struct.unpack(self.__format, buffer)
-        assert hdr.version is not None  # Version is always set
+        try:
+            items = struct.unpack(self.__format, buffer)
+        except struct.error:
+            logging.warning(
+                "Failed to unpack data record at byte %d in %s",
+                fp.tell() - len(buffer),
+                hdr.filename,
+            )
+            return None
+        if hdr.version is None:
+            raise RuntimeError("QHeader.version must be set before loading data")
         if hdr.version.isV12():
             offset = 5
             (ident, number, err, stime, etime) = items[:offset]

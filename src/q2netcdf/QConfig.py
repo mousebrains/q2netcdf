@@ -86,7 +86,11 @@ class QConfig:
                 logging.debug("Skipping unparseable v1.2 config line: %s", line)
 
     def __splitConfigv13(self) -> None:
-        self.__dict = json.loads(self.__config)
+        try:
+            self.__dict = json.loads(self.__config)
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            logging.warning("Failed to parse v1.3 JSON config, using empty dict")
+            self.__dict = {}
 
     def __len__(self) -> int:
         return len(self.__config)
@@ -100,5 +104,6 @@ class QConfig:
                 self.__splitConfigV12()
             else:
                 self.__splitConfigv13()
-        assert self.__dict is not None  # After split methods, dict is populated
+        if self.__dict is None:
+            raise RuntimeError("Config dict was not populated after parsing")
         return self.__dict
