@@ -4,6 +4,7 @@
 osu68?
 __pycache__
 *.egg-info
+.coverage
 *.python-version
 tpw*
 tkw*
