@@ -37,15 +37,22 @@ class QHeader:
         fp.seek(-n, 1)  # Back up n bytes
         return ident == RecordType.HEADER.value
 
+    @staticmethod
+    def _read_exact(fp, sz: int, fn: str, what: str) -> bytes:
+        """Read exactly sz bytes from fp, raising EOFError on short read."""
+        buffer = fp.read(sz)
+        if len(buffer) != sz:
+            raise EOFError(
+                f"EOF while reading {what}, {len(buffer)} != {sz}, in {fn}"
+            )
+        return buffer
+
     def __init__(self, fp, fn: str) -> None:
         self.filename = fn
         hdrSize = 0
 
-        buffer = fp.read(20)  # Read fixed header
-        n = len(buffer)
-        if n != 20:
-            raise EOFError(f"EOF in fixed header, {n} != 20, in {fn}")
-        hdrSize += n
+        buffer = self._read_exact(fp, 20, fn, "fixed header")
+        hdrSize += 20
 
         (ident, version, dt, self.Nc, self.Ns, self.Nf) = struct.unpack(
             "<HfQHHH", buffer
@@ -67,75 +74,65 @@ class QHeader:
         self.dtBinary = dt
         self.time = np.datetime64("0000-01-01") + np.timedelta64(dt, "ms")
 
+        hdrSize += self._read_identifiers(fp, fn)
+        hdrSize += self._read_config(fp, fn)
+
+        buffer = self._read_exact(fp, 2, fn, "data record size")
+        hdrSize += 2
+
+        self.dataSize = struct.unpack("<H", buffer)[0]
+        self.hdrSize = hdrSize
+
+    def _read_identifiers(self, fp, fn: str) -> int:
+        """Read channel identifiers, spectra identifiers, and frequencies."""
+        bytesRead = 0
+
         self.channels: tuple[int, ...] = ()
         self.spectra: tuple[int, ...] = ()
         self.frequencies: tuple[float, ...] = ()
-        self.config = QConfig(b"{}", self.version)
 
-        if self.Nc:  # Some channel identifiers to read
+        if self.Nc:
             sz = self.Nc * 2
-            buffer = fp.read(sz)  # Get channel identifiers
-            n = len(buffer)
-            if n != sz:
-                raise EOFError(
-                    f"EOF while reading channel identifiers, {n} != {sz}, in {fn}"
-                )
-            hdrSize += n
+            buffer = self._read_exact(fp, sz, fn, "channel identifiers")
+            bytesRead += sz
             self.channels = struct.unpack("<" + ("H" * self.Nc), buffer)
 
-        if self.Ns:  # Some spectra identifiers to read
+        if self.Ns:
             sz = self.Ns * 2
-            buffer = fp.read(sz)  # Get spectra identifiers
-            n = len(buffer)
-            if n != sz:
-                raise EOFError(
-                    f"EOF while reading spectra identifiers, {n} != {sz}, in {fn}"
-                )
-            hdrSize += n
+            buffer = self._read_exact(fp, sz, fn, "spectra identifiers")
+            bytesRead += sz
             self.spectra = struct.unpack("<" + ("H" * self.Ns), buffer)
 
-        if self.Nf:  # Some frequencies to read
+        if self.Nf:
             sz = self.Nf * 2
-            buffer = fp.read(sz)  # Get spectra identifiers
-            n = len(buffer)
-            if n != sz:
-                raise EOFError(f"EOF while reading frequencies, {n} != {sz}, in {fn}")
-            hdrSize += n
+            buffer = self._read_exact(fp, sz, fn, "frequencies")
+            bytesRead += sz
             self.frequencies = struct.unpack("<" + ("e" * self.Nf), buffer)
 
+        return bytesRead
+
+    def _read_config(self, fp, fn: str) -> int:
+        """Read the configuration record (v1.2 or v1.3 format)."""
+        assert self.version is not None  # Validated in __init__ before this call
+        bytesRead = 0
+        self.config = QConfig(b"{}", self.version)
+
         cfgHdrSz = 4 if self.version == QVersion.v12 else 2
-        buffer = fp.read(cfgHdrSz)  # Grab configuration record's fixed fields
-        n = len(buffer)
-        if n != cfgHdrSz:
-            raise EOFError(
-                f"EOF while reading fixed configuration record, {len(buffer)} != {cfgHdrSz} in {fn}"
-            )
-        hdrSize += n
+        buffer = self._read_exact(fp, cfgHdrSz, fn, "fixed configuration record")
+        bytesRead += cfgHdrSz
 
         if self.version == QVersion.v12:
             # cfgIdent is bad in the beta version of 1.2, should be RecordType.CONFIG_V12
             (cfgIdent, sz) = struct.unpack("<HH", buffer)
         else:
-            (sz,) = struct.unpack("<H", buffer)  # No config ident
+            (sz,) = struct.unpack("<H", buffer)
 
-        if sz:  # Some configuration record to read
-            buffer = fp.read(sz)
-            n = len(buffer)
-            if n != sz:
-                raise EOFError(
-                    f"EOF while reading configuration record, {n} != {sz}, in {fn}"
-                )
-            hdrSize += n
+        if sz:
+            buffer = self._read_exact(fp, sz, fn, "configuration record")
+            bytesRead += sz
             self.config = QConfig(buffer, self.version)
 
-        buffer = fp.read(2)  # Get data record size
-        n = len(buffer)
-        if n != 2:
-            raise EOFError(f"EOF while reading data record size, {n} != 2, in {fn}")
-        hdrSize += n
-
-        self.dataSize = struct.unpack("<H", buffer)[0]
-        self.hdrSize = hdrSize
+        return bytesRead
 
     def __repr__(self) -> str:
         msg = []

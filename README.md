@@ -147,7 +147,7 @@ Q-files are binary files containing oceanographic data from Rockland Scientific 
 
 ## Contributing
 
-Contributions are welcome! Please see [CONTRIBUTING.md](documents/CONTRIBUTING.md) for guidelines.
+Contributions are welcome! Please see [CONTRIBUTING.md](docs/CONTRIBUTING.md) for guidelines.
 
 ### Development Setup
 
@@ -164,12 +164,11 @@ To run a module for testing `python3 -m src.q2netcdf.QHeader --help`
 
 ## Additional Documentation
 
-- [CHANGELOG.md](documents/CHANGELOG.md) - Version history and changes
-- [CONTRIBUTING.md](documents/CONTRIBUTING.md) - Contributor guidelines and development setup
-- [SECURITY.md](documents/SECURITY.md) - Security policy and vulnerability reporting
-- [IMPROVEMENTS_APPLIED.md](documents/IMPROVEMENTS_APPLIED.md) - Recent improvements and updates
+- [CHANGELOG.md](docs/CHANGELOG.md) - Version history and changes
+- [CONTRIBUTING.md](docs/CONTRIBUTING.md) - Contributor guidelines and development setup
+- [SECURITY.md](docs/SECURITY.md) - Security policy and vulnerability reporting
+- [QFILE_FORMAT.md](docs/QFILE_FORMAT.md) - Q-file binary format specification
 - [CLAUDE.md](CLAUDE.md) - AI assistant guidance for working with this codebase
-- [Development Documentation](docs/development/) - Internal development notes and analysis
 
 ## License
 
