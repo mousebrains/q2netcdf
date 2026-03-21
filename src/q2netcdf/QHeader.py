@@ -42,9 +42,7 @@ class QHeader:
         """Read exactly sz bytes from fp, raising EOFError on short read."""
         buffer = fp.read(sz)
         if len(buffer) != sz:
-            raise EOFError(
-                f"EOF while reading {what}, {len(buffer)} != {sz}, in {fn}"
-            )
+            raise EOFError(f"EOF while reading {what}, {len(buffer)} != {sz}, in {fn}")
         return buffer
 
     def __init__(self, fp, fn: str) -> None:

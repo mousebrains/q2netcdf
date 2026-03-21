@@ -32,11 +32,15 @@ class TestLoadConfig:
 
     def test_valid_config(self, tmp_path):
         cfg = tmp_path / "valid.json"
-        cfg.write_text(json.dumps({
-            "channels": ["e_1", "pressure"],
-            "spectra": [],
-            "config": ["diss_length"],
-        }))
+        cfg.write_text(
+            json.dumps(
+                {
+                    "channels": ["e_1", "pressure"],
+                    "spectra": [],
+                    "config": ["diss_length"],
+                }
+            )
+        )
         result = QReduce.loadConfig(str(cfg))
         assert result is not None
         assert result["channels"] == ["e_1", "pressure"]

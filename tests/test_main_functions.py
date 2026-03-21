@@ -40,8 +40,9 @@ class TestQHeaderMain:
 
 class TestQFileMain:
     def test_main_normal_mode(self, mri_file, capsys):
-        with patch("sys.argv", ["QFile", str(mri_file), "--n", "2",
-                                 "--logLevel", "DEBUG"]):
+        with patch(
+            "sys.argv", ["QFile", str(mri_file), "--n", "2", "--logLevel", "DEBUG"]
+        ):
             qfile_main()
 
     def test_main_validate_mode(self, mri_file, capsys):
@@ -57,7 +58,6 @@ class TestQFileMain:
     def test_main_empty_file(self, empty_file, capsys):
         with patch("sys.argv", ["QFile", str(empty_file)]):
             qfile_main()  # Should handle EOFError gracefully
-
 
     def test_main_validate_corrupt(self, corrupt_file, capsys):
         with patch("sys.argv", ["QFile", str(corrupt_file), "--validate"]):
@@ -101,44 +101,54 @@ class TestQHexCodesMain:
             qhexcodes_main()
 
     def test_main_lookup_name(self, capsys):
-        with patch("sys.argv", ["QHexCodes", "--name", "pressure",
-                                 "--logLevel", "DEBUG"]):
+        with patch(
+            "sys.argv", ["QHexCodes", "--name", "pressure", "--logLevel", "DEBUG"]
+        ):
             qhexcodes_main()
 
 
 class TestQReduceMain:
     def test_main_with_valid_config(self, mri_file, tmp_path, capsys):
         import json
+
         cfg = tmp_path / "reduce.cfg"
-        cfg.write_text(json.dumps({
-            "channels": ["e_2", "pressure"],
-            "spectra": [],
-            "config": ["diss_length"],
-        }))
+        cfg.write_text(
+            json.dumps(
+                {
+                    "channels": ["e_2", "pressure"],
+                    "spectra": [],
+                    "config": ["diss_length"],
+                }
+            )
+        )
         output = tmp_path / "reduced.q"
-        with patch("sys.argv", ["QReduce", str(mri_file),
-                                 "--config", str(cfg),
-                                 "--output", str(output)]):
+        with patch(
+            "sys.argv",
+            ["QReduce", str(mri_file), "--config", str(cfg), "--output", str(output)],
+        ):
             qreduce_main()
         assert output.exists()
 
     def test_main_no_output(self, mri_file, tmp_path, capsys):
         import json
+
         cfg = tmp_path / "reduce.cfg"
-        cfg.write_text(json.dumps({
-            "channels": ["e_2", "pressure"],
-            "spectra": [],
-            "config": ["diss_length"],
-        }))
-        with patch("sys.argv", ["QReduce", str(mri_file),
-                                 "--config", str(cfg)]):
+        cfg.write_text(
+            json.dumps(
+                {
+                    "channels": ["e_2", "pressure"],
+                    "spectra": [],
+                    "config": ["diss_length"],
+                }
+            )
+        )
+        with patch("sys.argv", ["QReduce", str(mri_file), "--config", str(cfg)]):
             qreduce_main()
 
     def test_main_bad_config(self, mri_file, tmp_path, capsys):
         cfg = tmp_path / "bad.cfg"
         cfg.write_text("not json")
-        with patch("sys.argv", ["QReduce", str(mri_file),
-                                 "--config", str(cfg)]):
+        with patch("sys.argv", ["QReduce", str(mri_file), "--config", str(cfg)]):
             qreduce_main()
 
 
@@ -151,8 +161,10 @@ class TestQ2NetCDFMain:
 
     def test_main_no_compression(self, mri_file, tmp_path):
         nc = tmp_path / "out.nc"
-        with patch("sys.argv", ["q2netcdf", str(mri_file), "--nc", str(nc),
-                                 "--compressionLevel", "0"]):
+        with patch(
+            "sys.argv",
+            ["q2netcdf", str(mri_file), "--nc", str(nc), "--compressionLevel", "0"],
+        ):
             q2netcdf_main()
         assert nc.exists()
 
@@ -175,12 +187,24 @@ class TestMkISDPcfgMain:
 
     def test_main_with_options(self, tmp_path, capsys):
         cfg = tmp_path / "isdp.cfg"
-        with patch("sys.argv", ["mkISDPcfg", "--isdpConfig", str(cfg),
-                                 "--instrument", "slocum_glider",
-                                 "--fft_length", "4",
-                                 "--hp_cut", "0.125",
-                                 "--diss_length", "30",
-                                 "--overlap", "0"]):
+        with patch(
+            "sys.argv",
+            [
+                "mkISDPcfg",
+                "--isdpConfig",
+                str(cfg),
+                "--instrument",
+                "slocum_glider",
+                "--fft_length",
+                "4",
+                "--hp_cut",
+                "0.125",
+                "--diss_length",
+                "30",
+                "--overlap",
+                "0",
+            ],
+        ):
             mkisdpcfg_main()
         content = cfg.read_text()
         assert "fft_length = 4.0" in content
@@ -189,42 +213,64 @@ class TestMkISDPcfgMain:
 
     def test_main_fft_hp_mismatch_warning(self, tmp_path, capsys):
         cfg = tmp_path / "isdp.cfg"
-        with patch("sys.argv", ["mkISDPcfg", "--isdpConfig", str(cfg),
-                                 "--fft_length", "4",
-                                 "--hp_cut", "0.5"]):
+        with patch(
+            "sys.argv",
+            [
+                "mkISDPcfg",
+                "--isdpConfig",
+                str(cfg),
+                "--fft_length",
+                "4",
+                "--hp_cut",
+                "0.5",
+            ],
+        ):
             mkisdpcfg_main()
         out = capsys.readouterr().out
         assert "WARNING" in out
 
     def test_main_fft_without_hp_warning(self, tmp_path, capsys):
         cfg = tmp_path / "isdp.cfg"
-        with patch("sys.argv", ["mkISDPcfg", "--isdpConfig", str(cfg),
-                                 "--fft_length", "4"]):
+        with patch(
+            "sys.argv", ["mkISDPcfg", "--isdpConfig", str(cfg), "--fft_length", "4"]
+        ):
             mkisdpcfg_main()
         out = capsys.readouterr().out
         assert "WARNING" in out
 
     def test_main_hp_without_fft_warning(self, tmp_path, capsys):
         cfg = tmp_path / "isdp.cfg"
-        with patch("sys.argv", ["mkISDPcfg", "--isdpConfig", str(cfg),
-                                 "--hp_cut", "0.125"]):
+        with patch(
+            "sys.argv", ["mkISDPcfg", "--isdpConfig", str(cfg), "--hp_cut", "0.125"]
+        ):
             mkisdpcfg_main()
         out = capsys.readouterr().out
         assert "WARNING" in out
 
     def test_main_despiking_params(self, tmp_path, capsys):
         cfg = tmp_path / "isdp.cfg"
-        with patch("sys.argv", ["mkISDPcfg", "--isdpConfig", str(cfg),
-                                 "--shear_despiking", "3.0,0.5,10"]):
+        with patch(
+            "sys.argv",
+            ["mkISDPcfg", "--isdpConfig", str(cfg), "--shear_despiking", "3.0,0.5,10"],
+        ):
             mkisdpcfg_main()
         content = cfg.read_text()
         assert "shear_despiking" in content
 
     def test_main_boolean_options(self, tmp_path, capsys):
         cfg = tmp_path / "isdp.cfg"
-        with patch("sys.argv", ["mkISDPcfg", "--isdpConfig", str(cfg),
-                                 "--goodman_spectra", "true",
-                                 "--band_averaging", "false"]):
+        with patch(
+            "sys.argv",
+            [
+                "mkISDPcfg",
+                "--isdpConfig",
+                str(cfg),
+                "--goodman_spectra",
+                "true",
+                "--band_averaging",
+                "false",
+            ],
+        ):
             mkisdpcfg_main()
         content = cfg.read_text()
         assert "goodman_spectra = true" in content
@@ -232,6 +278,7 @@ class TestMkISDPcfgMain:
 
     def test_main_bad_directory(self, tmp_path):
         from argparse import ArgumentTypeError
+
         cfg = "/nonexistent/dir/isdp.cfg"
         with patch("sys.argv", ["mkISDPcfg", "--isdpConfig", cfg]):
             with pytest.raises(ArgumentTypeError):

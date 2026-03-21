@@ -248,7 +248,7 @@ class TestQDataV12Synthetic:
         header += struct.pack("<HH", 0x160, 0x620)  # pressure, T_0
 
         # v1.2 config
-        config_bytes = b'{}'
+        config_bytes = b"{}"
         header += struct.pack("<HH", RecordType.CONFIG_V12.value, len(config_bytes))
         header += config_bytes
 
@@ -291,7 +291,7 @@ class TestQDataV12Synthetic:
         header += struct.pack("<HHH", Nc, Ns, Nf)
         header += struct.pack("<H", 0x160)
 
-        config_bytes = b'{}'
+        config_bytes = b"{}"
         header += struct.pack("<HH", RecordType.CONFIG_V12.value, len(config_bytes))
         header += config_bytes
 
@@ -332,7 +332,7 @@ class TestQDataV12Synthetic:
         header += struct.pack("<HHH", Nc, Ns, Nf)
         header += struct.pack("<H", 0x160)
 
-        config_bytes = b'{}'
+        config_bytes = b"{}"
         header += struct.pack("<HH", RecordType.CONFIG_V12.value, len(config_bytes))
         header += config_bytes
 
@@ -437,7 +437,9 @@ class TestQHeaderSynthetic:
         header += config_bytes
 
         # Data record size
-        data_size = 2 + 2 + 8 + 2 + 2 + (Nc * 2)  # v1.2: ident+recno+err+stime+etime+channels
+        data_size = (
+            2 + 2 + 8 + 2 + 2 + (Nc * 2)
+        )  # v1.2: ident+recno+err+stime+etime+channels
         header += struct.pack("<H", data_size)
 
         qfile.write_bytes(header)

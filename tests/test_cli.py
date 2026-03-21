@@ -4,8 +4,9 @@ import subprocess
 import sys
 
 
-
-def run_cli(module: str, args: list[str], timeout: int = 10) -> subprocess.CompletedProcess:
+def run_cli(
+    module: str, args: list[str], timeout: int = 10
+) -> subprocess.CompletedProcess:
     """Run a CLI module and return the result."""
     return subprocess.run(
         [sys.executable, "-m", f"q2netcdf.{module}"] + args,
@@ -99,13 +100,21 @@ class TestMkISDPcfgCLI:
 
     def test_generate_with_options(self, tmp_path):
         cfg_out = tmp_path / "isdp.cfg"
-        result = run_cli("mkISDPcfg", [
-            "--isdpConfig", str(cfg_out),
-            "--instrument", "slocum_glider",
-            "--fft_length", "4",
-            "--hp_cut", "0.125",
-            "--diss_length", "30",
-        ])
+        result = run_cli(
+            "mkISDPcfg",
+            [
+                "--isdpConfig",
+                str(cfg_out),
+                "--instrument",
+                "slocum_glider",
+                "--fft_length",
+                "4",
+                "--hp_cut",
+                "0.125",
+                "--diss_length",
+                "30",
+            ],
+        )
         assert result.returncode == 0
         content = cfg_out.read_text()
         assert "fft_length" in content
