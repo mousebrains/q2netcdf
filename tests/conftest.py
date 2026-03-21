@@ -196,6 +196,36 @@ def synthetic_multi_mri_files(tmp_path):
 
 
 @pytest.fixture
+def synthetic_mismatched_channels_files(tmp_path):
+    """Create two v1.3 Q-files with different channel sets for merge testing.
+
+    File 1: channels [e_2, pressure, e_1] — 5 records
+    File 2: channels [pressure, T_0] — 3 records
+    """
+    config_str = '{"diss_length":16,"fft_length":4}'
+    base1 = int(
+        np.datetime64("2025-01-01T00:00:00").astype("datetime64[ms]").astype(int)
+    )
+    base2 = int(
+        np.datetime64("2025-01-01T01:00:00").astype("datetime64[ms]").astype(int)
+    )
+
+    # File 1: e_2, pressure, e_1
+    f1_data = [[float(i * 16), -8.0, 500.0 - i * 10, -9.0] for i in range(5)]
+    f1 = _build_v13_segment(base1, 3, [0xA12, 0x160, 0xA11], config_str, f1_data)
+
+    # File 2: pressure, T_0 (different channel set)
+    f2_data = [[float(i * 16), 400.0 - i * 10, 15.0 + i] for i in range(3)]
+    f2 = _build_v13_segment(base2, 2, [0x160, 0x620], config_str, f2_data)
+
+    p1 = tmp_path / "mismatch1.mri"
+    p2 = tmp_path / "mismatch2.mri"
+    p1.write_bytes(f1)
+    p2.write_bytes(f2)
+    return [p1, p2]
+
+
+@pytest.fixture
 def sample_qfile_path(tmp_path):
     """Create a minimal valid Q-file path for testing."""
     qfile = tmp_path / "sample.q"

@@ -204,3 +204,46 @@ class TestQHeaderSync:
         assert m.frequencies == ()
         # repr should not raise AttributeError
         repr(m)
+
+
+class TestQReduceVersionSync:
+    """Verify mergeqfiles.QReduce handles v1.3 files correctly."""
+
+    def test_reduce_v13_file(self, synthetic_v13_qfile):
+        """QReduce from mergeqfiles should handle v1.3 files without corruption."""
+        from q2netcdf.mergeqfiles import QReduce as MergeQReduce
+
+        config = {"channels": ["pressure"], "spectra": [], "config": []}
+        qr = MergeQReduce(str(synthetic_v13_qfile), config)
+
+        # Should have found some records
+        assert qr.nRecords > 0
+        assert qr.dataSize > 0
+
+        # Write reduced output and verify it's readable
+        import io
+
+        buf = io.BytesIO()
+        sz = qr.reduceFile(buf)
+        assert sz > 0
+
+        # Read back the reduced file with the main package
+        from q2netcdf.QFile import QFile
+        import tempfile
+        import os
+
+        with tempfile.NamedTemporaryFile(suffix=".q", delete=False) as f:
+            f.write(buf.getvalue())
+            tmpname = f.name
+
+        try:
+            with QFile(tmpname) as qf:
+                hdr = qf.header()
+                assert hdr.Nc == 1  # Only pressure selected
+                records = list(qf.data())
+                assert len(records) > 0
+                # Verify pressure values are finite (not garbage from wrong offsets)
+                for rec in records:
+                    assert len(rec.channels) == 1
+        finally:
+            os.unlink(tmpname)

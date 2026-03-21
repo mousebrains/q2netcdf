@@ -11,12 +11,23 @@ Main classes:
 - QVersion: Q-file version enumeration
 - QHexCodes: Identifier to name mapping
 
-Example:
-    >>> from q2netcdf import QFile
-    >>> with QFile("data.q") as qf:
-    ...     header = qf.header()
-    ...     for record in qf.data():
-    ...         process(record)
+Usage:
+    For record-by-record access to Q-file data, use QFile:
+
+        >>> from q2netcdf import QFile
+        >>> with QFile("data.q") as qf:
+        ...     header = qf.header()
+        ...     for record in qf.data():
+        ...         process(record)
+
+    For direct conversion to an xarray Dataset, use loadQfile:
+
+        >>> from q2netcdf.q2netcdf import loadQfile, mergeDatasets
+        >>> ds = loadQfile("data.q")
+
+    QFile gives low-level, memory-efficient streaming access to individual
+    records. loadQfile eagerly loads all data into an xarray Dataset ready
+    for analysis or NetCDF export.
 """
 
 from importlib.metadata import version, PackageNotFoundError

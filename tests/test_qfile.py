@@ -35,7 +35,7 @@ class TestQFile:
         test_file.write_bytes(b"dummy content")
 
         with QFile(str(test_file)) as qf:
-            with pytest.raises(EOFError, match="header must be read before"):
+            with pytest.raises(RuntimeError, match="header must be read before"):
                 # Generator doesn't raise until iteration starts
                 next(qf.data())
 

@@ -173,7 +173,7 @@ class TestQ2NetCDFMain:
         with patch("sys.argv", ["q2netcdf", str(empty_file), "--nc", str(nc)]):
             with pytest.raises(SystemExit) as exc_info:
                 q2netcdf_main()
-            assert exc_info.value.code == 0  # exits with 0 for "No data found"
+            assert exc_info.value.code == 1  # exits with 1 when no data found
 
 
 class TestMkISDPcfgMain:

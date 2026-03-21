@@ -210,3 +210,162 @@ class TestAddEncoding:
         ds2 = xr.open_dataset(str(nc_path))
         assert len(ds2.time) == len(ds.time)
         ds2.close()
+
+
+class TestMergeSchemas:
+    """Test mergeDatasets with mismatched channel schemas."""
+
+    def test_merge_mismatched_channels(self, synthetic_mismatched_channels_files):
+        """Verify outer join produces correct NaN fill for mismatched schemas."""
+        frames = []
+        for path in synthetic_mismatched_channels_files:
+            ds = loadQfile(str(path))
+            assert ds is not None
+            frames.append(ds)
+
+        ds = mergeDatasets(frames)
+
+        # File 1 has 5 records, file 2 has 3
+        assert len(ds.time) == 8
+
+        # pressure is in both files — all valid
+        assert "pressure" in ds
+        assert ds.pressure.notnull().sum().values == 8
+
+        # e_2 and e_1 only in file 1 — NaN for file 2's 3 records
+        assert "e_2" in ds
+        assert "e_1" in ds
+        assert ds.e_2.isnull().sum().values == 3
+        assert ds.e_1.isnull().sum().values == 3
+
+        # T_0 only in file 2 — NaN for file 1's 5 records
+        assert "T_0" in ds
+        assert ds.T_0.isnull().sum().values == 5
+        assert ds.T_0.notnull().sum().values == 3
+
+
+class TestRoundTrip:
+    """Test full Q-file → NetCDF → read-back round trip."""
+
+    def test_synthetic_roundtrip(self, synthetic_v13_qfile, tmp_path):
+        """Create binary Q-file, load, convert to NetCDF, read back, verify."""
+        ds = loadQfile(str(synthetic_v13_qfile))
+        assert ds is not None
+
+        # Write to NetCDF
+        nc_path = tmp_path / "roundtrip.nc"
+        ds = cfCompliant(ds)
+        ds = addEncoding(ds)
+        ds.to_netcdf(str(nc_path))
+
+        # Read back
+        ds2 = xr.open_dataset(str(nc_path), decode_timedelta=False)
+        assert len(ds2.time) == len(ds.time)
+        assert "pressure" in ds2
+        assert "e_1" in ds2
+        assert "e_2" in ds2
+
+        # Verify pressure values are valid floats (not all NaN)
+        assert ds2.pressure.notnull().sum().values > 0
+        ds2.close()
+
+
+class TestErrorHandling:
+    """Test handling of truncated and corrupt files."""
+
+    def test_truncated_header(self, tmp_path):
+        """File with only 10 bytes (header needs 20) raises EOFError."""
+        f = tmp_path / "truncated.q"
+        f.write_bytes(b"\x29\x17" + b"\x00" * 8)  # Header ident + garbage
+        with pytest.raises(EOFError):
+            loadQfile(str(f))
+
+    def test_truncated_data_record(self, tmp_path, caplog):
+        """File with valid header but truncated data record logs warning."""
+        import struct
+        import numpy as np
+        from q2netcdf.QRecordType import RecordType
+        from q2netcdf.QVersion import QVersion
+
+        header = bytearray()
+        header += struct.pack("<H", RecordType.HEADER.value)
+        header += struct.pack("<f", QVersion.v13.value)
+        dt_ms = int(np.datetime64("2025-01-01").astype("datetime64[ms]").astype(int))
+        header += struct.pack("<Q", dt_ms)
+        header += struct.pack("<HHH", 1, 0, 0)  # Nc=1, Ns=0, Nf=0
+        header += struct.pack("<H", 0x160)  # pressure channel
+        header += struct.pack("<H", 2)  # config size = 2
+        header += b"{}"
+        header += struct.pack("<H", 6)  # data record size: 2+2+2=6
+
+        # One valid record
+        data = struct.pack("<H", RecordType.DATA.value)
+        data += struct.pack("<e", 0.0)  # stime
+        data += struct.pack("<e", 100.0)  # pressure
+
+        # Truncated record (3 bytes of expected 6)
+        truncated = b"\x57\x16\x00"
+
+        f = tmp_path / "truncdata.q"
+        f.write_bytes(header + data + truncated)
+
+        import logging
+
+        with caplog.at_level(logging.WARNING):
+            ds = loadQfile(str(f))
+
+        # Should still get the one valid record
+        assert ds is not None
+        assert len(ds.time) == 1
+        # Should have logged a truncation warning
+        assert any("Truncated" in r.message for r in caplog.records)
+
+    def test_bad_json_config(self, tmp_path):
+        """File with malformed JSON config should not crash."""
+        import struct
+        import numpy as np
+        from q2netcdf.QRecordType import RecordType
+        from q2netcdf.QVersion import QVersion
+
+        header = bytearray()
+        header += struct.pack("<H", RecordType.HEADER.value)
+        header += struct.pack("<f", QVersion.v13.value)
+        dt_ms = int(np.datetime64("2025-01-01").astype("datetime64[ms]").astype(int))
+        header += struct.pack("<Q", dt_ms)
+        header += struct.pack("<HHH", 1, 0, 0)
+        header += struct.pack("<H", 0x160)
+        bad_json = b"{invalid}"
+        header += struct.pack("<H", len(bad_json))
+        header += bad_json
+        header += struct.pack("<H", 6)  # data record size
+
+        data = struct.pack("<H", RecordType.DATA.value)
+        data += struct.pack("<e", 0.0)
+        data += struct.pack("<e", 100.0)
+
+        f = tmp_path / "badjson.q"
+        f.write_bytes(header + data)
+
+        ds = loadQfile(str(f))
+        assert ds is not None
+        assert len(ds.time) == 1
+
+    def test_bounds_check_rejects_huge_nc(self, tmp_path):
+        """Header with Nc > 1024 should raise ValueError."""
+        import struct
+        import numpy as np
+        from q2netcdf.QRecordType import RecordType
+        from q2netcdf.QVersion import QVersion
+
+        header = bytearray()
+        header += struct.pack("<H", RecordType.HEADER.value)
+        header += struct.pack("<f", QVersion.v13.value)
+        dt_ms = int(np.datetime64("2025-01-01").astype("datetime64[ms]").astype(int))
+        header += struct.pack("<Q", dt_ms)
+        header += struct.pack("<HHH", 2000, 0, 0)  # Nc=2000 (over bounds)
+
+        f = tmp_path / "hugeNc.q"
+        f.write_bytes(header)
+
+        with pytest.raises(ValueError, match="Suspect header counts"):
+            loadQfile(str(f))

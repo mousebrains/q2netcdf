@@ -83,6 +83,16 @@ class TestQ2NetCDFCLI:
         assert nc_out.exists()
         assert nc_out.stat().st_size > 0
 
+        # Verify NetCDF content is valid
+        import xarray as xr
+
+        ds = xr.open_dataset(str(nc_out), decode_timedelta=False)
+        assert "time" in ds.coords
+        assert len(ds.time) > 0
+        # Should have at least one data variable
+        assert len(ds.data_vars) > 0
+        ds.close()
+
 
 class TestMkISDPcfgCLI:
     def test_help(self):

@@ -71,11 +71,11 @@ The `QVersion` enum (values 1.2, 1.3) drives conditional logic throughout parsin
 ### Sensor Identifier Mapping
 
 `QHexCodes` provides bidirectional mapping between:
-- **Hex codes** (0x0001 - 0x00FF): Binary identifiers in Q-files
-- **Names** (e.g., "W1", "T1", "Sh1"): Human-readable sensor names
+- **Hex codes** (0x0010 - 0x0D20): Binary identifiers in Q-files (upper 12 bits = sensor type, lower 4 bits = instance)
+- **Names** (e.g., "sh_0", "T_0", "pressure"): Human-readable sensor names with zero-based instance numbering
 - **Attributes**: Units, long names, CF-compliant metadata
 
-The mapping includes instance numbering (e.g., W1, W2 for multiple shear probes).
+The mapping includes instance numbering (e.g., sh_0, sh_1 for multiple shear probes).
 
 ### Type Safety Requirements
 

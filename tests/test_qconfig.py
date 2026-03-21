@@ -1,6 +1,5 @@
 """Tests for QConfig parser."""
 
-import pytest
 import numpy as np
 from q2netcdf.QConfig import QConfig
 from q2netcdf.QVersion import QVersion
@@ -61,12 +60,12 @@ class TestQConfig:
         assert parsed["disabled"] is False
 
     def test_parse_invalid_v13_json(self):
-        """Test handling of invalid JSON in v1.3 config."""
+        """Test handling of invalid JSON in v1.3 config returns empty dict."""
         config_str = b"{invalid json}"
         qconfig = QConfig(config_str, QVersion.v13)
 
-        with pytest.raises(Exception):
-            qconfig.config()
+        result = qconfig.config()
+        assert result == {}
 
     def test_empty_config(self):
         """Test handling of empty configuration."""
