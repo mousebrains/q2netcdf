@@ -153,7 +153,11 @@ class QConfig:
                 pass
 
     def __splitConfigv13(self) -> None:
-        self.__dict = json.loads(self.__config)
+        try:
+            self.__dict = json.loads(self.__config)
+        except (ValueError, UnicodeDecodeError):
+            logging.warning("Failed to parse v1.3 JSON config")
+            self.__dict = {}
 
     def __len__(self) -> int:
         return len(self.__config)
@@ -170,7 +174,8 @@ class QConfig:
                 self.__splitConfigV12()
             else:
                 self.__splitConfigv13()
-        assert self.__dict is not None  # After split methods, dict is populated
+        if self.__dict is None:
+            self.__dict = {}
         return self.__dict
 
 
@@ -699,7 +704,8 @@ class QHexCodes:
         if item is None:
             return None
 
-        assert cnt is not None  # __findIdent returns both None or both non-None
+        if cnt is None:
+            return None
         name = item[0]
         return cls.__fixName(name, cnt)
 
@@ -718,7 +724,8 @@ class QHexCodes:
         if item is None:
             return None
 
-        assert cnt is not None  # __findIdent returns both None or both non-None
+        if cnt is None:
+            return None
         attrs = item[1].copy()  # In case I modify it
 
         for attr in attrs:
@@ -809,6 +816,11 @@ class QHeader:
         if self.version is None:
             raise NotImplementedError(f"Invalid version, {version}, in {fn}")
 
+        if self.Nc > 1024 or self.Ns > 1024 or self.Nf > 65536:
+            raise ValueError(
+                f"Unreasonable counts Nc={self.Nc} Ns={self.Ns} Nf={self.Nf} in {fn}"
+            )
+
         self.dtBinary = dt
         self.time = np.datetime64("0000-01-01") + np.timedelta64(dt, "ms")
 
@@ -851,7 +863,8 @@ class QHeader:
 
     def _read_config(self, fp: IO[bytes], fn: str) -> int:
         """Read the configuration record (v1.2 or v1.3 format)."""
-        assert self.version is not None  # Validated in __init__ before this call
+        if self.version is None:
+            raise ValueError(f"Version not set before reading config in {fn}")
         bytesRead = 0
         self.config = QConfig(b"{}", self.version)
 
@@ -910,6 +923,7 @@ class QReduce:
         with open(filename, "rb") as fp:
             hdr = QHeader(fp, filename)
             self.fileSizeOrig = os.fstat(fp.fileno()).st_size
+            self.__version = hdr.version
 
         # Convert tuples to ndarrays for processing
         channelArray = np.array(hdr.channels, dtype="uint16")
@@ -1046,8 +1060,15 @@ class QReduce:
         if len(buffer) != self.dataSizeOrig:
             return None
 
-        record = buffer[:2] + buffer[12:14]  # Ident + stime
-        data = np.frombuffer(buffer, dtype="<f2", offset=16)
+        if self.__version is not None and self.__version.isV12():
+            stime = buffer[12:14]
+            data_offset = 16
+        else:
+            stime = buffer[2:4]
+            data_offset = 4
+
+        record = buffer[:2] + stime
+        data = np.frombuffer(buffer, dtype="<f2", offset=data_offset)
         data = data[self.__indices]
         record += data.tobytes()
         return record
@@ -1141,16 +1162,13 @@ def reduceAndDecimate(
 
     for fn in sorted(info):
         qr = info[fn]
+        nSamples = max(1, int(np.floor(qr.nRecords * ratio)))
         indices = np.unique(
-            np.floor(
-                np.linspace(
-                    0,
-                    qr.nRecords,
-                    np.floor(qr.nRecords * ratio).astype(int),
-                    endpoint=False,
-                )
-            ).astype(int)
+            np.floor(np.linspace(0, qr.nRecords, nSamples, endpoint=False)).astype(int)
         )
+        lastIdx = int(qr.nRecords) - 1
+        if lastIdx >= 0 and (len(indices) == 0 or indices[-1] != lastIdx):
+            indices = np.append(indices, lastIdx)
         sz = qr.decimate(ofp, indices)
         logging.info(
             "Decimated %s to %s -> %s -> %s n=%s/%s",
@@ -1205,6 +1223,8 @@ def reduceFiles(
                 )
         else:
             reduceAndDecimate(info, ofp, ofn, maxSize)
+        ofp.flush()
+        os.fsync(ofp.fileno())
         if ofp.seekable():
             return ofp.tell()  # Actual file size
         st = os.fstat(ofp.fileno())
@@ -1251,7 +1271,7 @@ def decimateFiles(qFiles: Dict[str, int], ofn: str, totSize: int, maxSize: int) 
                     totHdrSize += item["hdrSize"]
                     totDataSize += item["dataSize"] * item["nRecords"]
             except EOFError:
-                pass
+                logging.warning("Skipping %s: truncated header", ifn)
             except (OSError, ValueError):
                 logging.exception("filename %s", ifn)
 
@@ -1270,11 +1290,13 @@ def decimateFiles(qFiles: Dict[str, int], ofn: str, totSize: int, maxSize: int) 
             for ifn in filenames:
                 item = info[ifn]
                 n = item["nRecords"]
+                nSamples = max(1, int(math.floor(n * ratio)))
                 indices = np.unique(
-                    np.floor(
-                        np.linspace(0, n, math.floor(n * ratio), endpoint=False)
-                    ).astype(int)
+                    np.floor(np.linspace(0, n, nSamples, endpoint=False)).astype(int)
                 )
+                lastIdx = int(n) - 1
+                if lastIdx >= 0 and (len(indices) == 0 or indices[-1] != lastIdx):
+                    indices = np.append(indices, lastIdx)
                 hdrSize = item["hdrSize"]
                 dataSize = item["dataSize"]
                 offsets = hdrSize + indices * dataSize
@@ -1297,6 +1319,8 @@ def decimateFiles(qFiles: Dict[str, int], ofn: str, totSize: int, maxSize: int) 
                         if len(buffer) != dataSize:
                             break
                         ofp.write(buffer)
+            ofp.flush()
+            os.fsync(ofp.fileno())
             if ofp.seekable():
                 return ofp.tell()
             st = os.fstat(ofp.fileno())
@@ -1323,16 +1347,18 @@ def glueFiles(filenames: List[str], ofn: str, bufferSize: int = 1024 * 1024) -> 
         totSize = 0
         with open(ofn, "ab") as ofp:
             for ifn in filenames:
+                fileBytes = 0
                 with open(ifn, "rb") as ifp:
                     while True:
                         buffer = ifp.read(bufferSize)
                         if len(buffer) <= 0:
                             break  # EOF
                         ofp.write(buffer)
-                        logging.info(
-                            "Appended %s to %s with %s bytes", ifn, ofn, len(buffer)
-                        )
-                        totSize += len(buffer)
+                        fileBytes += len(buffer)
+                logging.info("Appended %s to %s, %s bytes", ifn, ofn, fileBytes)
+                totSize += fileBytes
+            ofp.flush()
+            os.fsync(ofp.fileno())
             if ofp.seekable():
                 fSize = ofp.tell()
             else:
@@ -1405,28 +1431,66 @@ def scanDirectory(args: Namespace, times: np.ndarray) -> int:
             logging.info("Can't append more to file, %s >= %s", fSize, args.maxSize)
             return fSize
         logging.info("Reduced maxsize by %s since file already exists", fSize)
+        # Appending to existing file — write directly (no temp file)
+        ofn = args.output
+        useTmp = False
     elif not qFiles:  # No q-files, so create empty file and return 0
         with open(args.output, "wb"):
             pass
         logging.info("No new files, so created an empty file %s", args.output)
         return 0
+    else:
+        # Fresh write — use temp file for crash recovery
+        ofn = args.output + ".tmp"
+        useTmp = True
+        if os.path.isfile(ofn):
+            os.remove(ofn)  # Clean up leftover from previous crash
+            logging.info("Removed stale temp file %s", ofn)
 
-    if args.config and os.path.isfile(
-        args.config
-    ):  # We're going to reduce the size of the Q-files,
-        value = reduceFiles(qFiles, args.config, args.output, args.maxSize)
-        # Fall through if config is empty
-        if value is not None:
-            return value
+    try:
+        if args.config and os.path.isfile(args.config):
+            value = reduceFiles(qFiles, args.config, ofn, args.maxSize)
+            if value is not None:
+                if useTmp:
+                    os.rename(ofn, args.output)
+                return value
 
-    logging.info("Total size %s max %s", totSize, args.maxSize)
+        logging.info("Total size %s max %s", totSize, args.maxSize)
 
-    if totSize <= args.maxSize:
-        # Glue the files together since their total size is small enough
-        return glueFiles(sorted(qFiles, reverse=False), args.output, args.bufferSize)
+        if totSize <= args.maxSize:
+            result = glueFiles(sorted(qFiles, reverse=False), ofn, args.bufferSize)
+        else:
+            result = decimateFiles(qFiles, ofn, totSize, args.maxSize)
 
-    # Parse the Q-files and pull out roughly equally spaced in time records
-    return decimateFiles(qFiles, args.output, totSize, args.maxSize)
+        if useTmp:
+            os.rename(ofn, args.output)
+        return result
+    except Exception:
+        if useTmp and os.path.isfile(ofn):
+            os.remove(ofn)  # Clean up failed temp file
+        raise
+
+
+def __chkPositiveInt(val):
+    # type: (str) -> int
+    """Argparse type validator: positive integer."""
+    from argparse import ArgumentTypeError
+
+    ival = int(val)
+    if ival > 0:
+        return ival
+    raise ArgumentTypeError("{} is not a positive integer".format(val))
+
+
+def __chkNotNegativeFloat(val):
+    # type: (str) -> float
+    """Argparse type validator: non-negative float."""
+    from argparse import ArgumentTypeError
+
+    fval = float(val)
+    if fval >= 0:
+        return fval
+    raise ArgumentTypeError("{} is negative".format(val))
 
 
 def main() -> None:
@@ -1438,13 +1502,15 @@ def main() -> None:
     parser.add_argument(
         "dt", type=float, help="Seconds added to stime for other end of samples"
     )
-    parser.add_argument("maxSize", type=int, help="Maximum output filesize in bytes")
+    parser.add_argument(
+        "maxSize", type=__chkPositiveInt, help="Maximum output filesize in bytes"
+    )
     parser.add_argument(
         "--output", "-o", type=str, default="/dev/stdout", help="Output filename"
     )
     parser.add_argument(
         "--bufferSize",
-        type=int,
+        type=__chkPositiveInt,
         default=100 * 1024,
         help="Maximum buffer size to read at a time in bytes",
     )
@@ -1457,7 +1523,7 @@ def main() -> None:
     parser.add_argument("--logfile", type=str, help="Output of logfile messages")
     parser.add_argument(
         "--safety",
-        type=float,
+        type=__chkNotNegativeFloat,
         default=30,
         help="Extra seconds to add to end time for race condition issue",
     )
