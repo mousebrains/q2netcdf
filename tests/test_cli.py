@@ -51,7 +51,7 @@ class TestQFileCLI:
     def test_nonexistent_file(self):
         result = run_cli("QFile", ["/nonexistent/file.mri"])
         # Should handle gracefully (logs exception)
-        assert result.returncode == 0 or result.returncode == 1
+        assert result.returncode != 0
 
 
 class TestQReduceCLI:

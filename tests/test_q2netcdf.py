@@ -1,6 +1,7 @@
 """Tests for q2netcdf conversion module."""
 
 import math
+import numpy as np
 import pytest
 import xarray as xr
 
@@ -369,3 +370,76 @@ class TestErrorHandling:
 
         with pytest.raises(ValueError, match="Suspect header counts"):
             loadQfile(str(f))
+
+
+class TestRealFileRoundTrip:
+    """Full roundtrip: Q-file -> Dataset -> NetCDF -> read back -> verify."""
+
+    def test_v13_roundtrip(self, mri_file, tmp_path):
+        ds = loadQfile(str(mri_file))
+        assert ds is not None
+
+        orig_times = ds.time.values.copy()
+        orig_pressure = ds.pressure.values.copy()
+
+        nc = tmp_path / "v13_roundtrip.nc"
+        ds_out = cfCompliant(ds)
+        ds_out = addEncoding(ds_out)
+        ds_out.to_netcdf(str(nc))
+
+        ds2 = xr.open_dataset(str(nc), decode_timedelta=False)
+        assert len(ds2.time) == len(orig_times)
+        assert "pressure" in ds2
+        np.testing.assert_array_equal(ds2.time.values, orig_times)
+        np.testing.assert_allclose(ds2.pressure.values, orig_pressure, rtol=1e-5)
+        assert "CF-1.13" in ds2.attrs["Conventions"]
+        assert "time_coverage_start" in ds2.attrs
+        ds2.close()
+
+    def test_v12_roundtrip(self, qfile_v12, tmp_path):
+        ds = loadQfile(str(qfile_v12))
+        assert ds is not None
+
+        orig_times = ds.time.values.copy()
+        orig_pressure = ds.pressure.values.copy()
+
+        nc = tmp_path / "v12_roundtrip.nc"
+        ds_out = cfCompliant(ds)
+        ds_out = addEncoding(ds_out)
+        ds_out.to_netcdf(str(nc))
+
+        ds2 = xr.open_dataset(str(nc), decode_timedelta=False)
+        assert len(ds2.time) == len(orig_times)
+        assert "pressure" in ds2
+        np.testing.assert_array_equal(ds2.time.values, orig_times)
+        np.testing.assert_allclose(ds2.pressure.values, orig_pressure, rtol=1e-5)
+        # v1.2 has spectra — verify freq coordinate survived
+        assert "freq" in ds2.coords
+        assert len(ds2.freq) == 18
+        # Verify spectra variable survived
+        assert "shear_gfd_1" in ds2
+        assert "CF-1.13" in ds2.attrs["Conventions"]
+        ds2.close()
+
+    def test_multifile_roundtrip(self, mri_file, qfile_v12, tmp_path):
+        frames = []
+        for path in [mri_file, qfile_v12]:
+            ds = loadQfile(str(path))
+            assert ds is not None
+            frames.append(ds)
+
+        ds = mergeDatasets(frames)
+        total_records = len(frames[0].time) + len(frames[1].time)
+        assert len(ds.time) == total_records
+        assert len(ds.ftime) == 2
+
+        nc = tmp_path / "multi_roundtrip.nc"
+        ds_out = cfCompliant(ds)
+        ds_out = addEncoding(ds_out)
+        ds_out.to_netcdf(str(nc))
+
+        ds2 = xr.open_dataset(str(nc), decode_timedelta=False)
+        assert len(ds2.time) == total_records
+        assert len(ds2.ftime) == 2
+        assert "pressure" in ds2
+        ds2.close()

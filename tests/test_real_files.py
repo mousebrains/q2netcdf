@@ -414,6 +414,62 @@ class TestQDataWithSpectra:
             assert "spectra[T_0]" in pretty
 
 
+class TestV12RealFile:
+    """Test reading real v1.2 Q-files with spectra."""
+
+    def test_parse_v12_header(self, qfile_v12):
+        with open(str(qfile_v12), "rb") as fp:
+            hdr = QHeader(fp, str(qfile_v12))
+        assert hdr.version == QVersion.v12
+        assert hdr.Nc == 25
+        assert hdr.Ns == 4
+        assert hdr.Nf == 18
+
+    def test_v12_record_fields(self, qfile_v12):
+        """v1.2 records have record number, error code, and end time."""
+        with QFile(str(qfile_v12)) as qf:
+            hdr = qf.header()
+            assert hdr.version == QVersion.v12
+            rec = next(qf.data())
+            assert rec.number is not None  # v1.2 has record number
+            assert rec.error is not None  # v1.2 has error code
+            assert rec.t1 is not None  # v1.2 has end time
+
+    def test_v12_spectra_shape(self, qfile_v12):
+        """v1.2 file has spectra with shape (Ns, Nf)."""
+        with QFile(str(qfile_v12)) as qf:
+            qf.header()
+            rec = next(qf.data())
+            assert rec.spectra.shape == (4, 18)
+
+    def test_v12_data_split(self, qfile_v12):
+        """split() produces named channels and spectra."""
+        with QFile(str(qfile_v12)) as qf:
+            hdr = qf.header()
+            rec = next(qf.data())
+            record, attrs = rec.split(hdr)
+            assert "pressure" in record
+            assert "e_1" in record
+            assert "time" in record
+            # Spectra should be present
+            assert "shear_gfd_1" in record
+
+    def test_v12_all_records_readable(self, qfile_v12):
+        """All 15 records in the v1.2 file should be readable."""
+        with QFile(str(qfile_v12)) as qf:
+            qf.header()
+            records = list(qf.data())
+            assert len(records) == 15
+
+    def test_v12_validate(self, qfile_v12):
+        """Validate the v1.2 file."""
+        with QFile(str(qfile_v12)) as qf:
+            results = qf.validate()
+            assert results["valid"] is True
+            assert results["version"] == QVersion.v12
+            assert results["records_readable"] == 15
+
+
 class TestQHeaderSynthetic:
     """Test QHeader edge cases with synthetic data."""
 

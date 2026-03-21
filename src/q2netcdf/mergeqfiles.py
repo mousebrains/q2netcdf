@@ -224,6 +224,7 @@ class QHexCodes:
                     "acceleration_Y",
                     "acceleration_Z",
                 ],
+                "units": "m/s^2",
             },
         ],
         0x120: [
@@ -234,6 +235,7 @@ class QHexCodes:
                     "piezo_X",
                     "piezo_Y",
                 ],
+                "units": "m/s^2",
             },
         ],
         0x130: [
@@ -245,7 +247,7 @@ class QHexCodes:
                     "Inclinometer_Y",
                     "Inclinometer_T",
                 ],
-                "units": ["degrees", "degrees", "Celsius"],
+                "units": ["degrees", "degrees", "degrees", "Celsius"],
             },
         ],
         0x140: [

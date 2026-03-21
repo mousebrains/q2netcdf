@@ -167,7 +167,7 @@ def mergeDatasets(frames: list[xr.Dataset]) -> xr.Dataset:
 
 def cfCompliant(ds: xr.Dataset) -> xr.Dataset:
     """
-    Add CF-1.8 compliant metadata to Dataset.
+    Add CF-1.13 compliant metadata to Dataset.
 
     Args:
         ds: Input Dataset

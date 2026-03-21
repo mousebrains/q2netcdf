@@ -6,6 +6,7 @@
 
 import os.path
 import logging
+import sys
 from typing import Generator, Any, BinaryIO
 from .QHeader import QHeader
 from .QData import QData, QRecord
@@ -249,6 +250,7 @@ def main() -> None:
             logging.info(f"EOF while reading {fn}")
         except Exception:
             logging.exception(f"While reading {fn}")
+            sys.exit(1)
 
 
 if __name__ == "__main__":

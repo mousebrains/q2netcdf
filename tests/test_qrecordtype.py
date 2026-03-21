@@ -29,9 +29,9 @@ class TestQRecordType:
 
     def test_record_type_string_representation(self):
         """Test string representation of record types."""
-        assert "HEADER" in str(RecordType.HEADER)
-        assert "CONFIG_V12" in str(RecordType.CONFIG_V12)
-        assert "DATA" in str(RecordType.DATA)
+        assert str(RecordType.HEADER) == "RecordType.HEADER"
+        assert str(RecordType.CONFIG_V12) == "RecordType.CONFIG_V12"
+        assert str(RecordType.DATA) == "RecordType.DATA"
 
     def test_record_type_by_value(self):
         """Test accessing record types by value."""

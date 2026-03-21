@@ -118,7 +118,7 @@ The class automatically detects format and exposes unified `config()` dict inter
    - Create mini Dataset with proper dimensions (time, freq)
 3. Concatenate all records along time dimension
 4. Add file-level config as coordinate variables
-5. Apply CF-1.8 compliant metadata via `cfCompliant()`
+5. Apply CF-1.13 compliant metadata via `cfCompliant()`
 
 **Critical**: Scalars use `("time",)` dimension, spectra use `("time", "freq")`.
 

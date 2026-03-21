@@ -53,7 +53,9 @@ class TestQFileMain:
 
     def test_main_nonexistent_file(self, capsys):
         with patch("sys.argv", ["QFile", "/nonexistent/file.mri"]):
-            qfile_main()  # Should handle gracefully (logs exception)
+            with pytest.raises(SystemExit) as exc_info:
+                qfile_main()
+            assert exc_info.value.code == 1
 
     def test_main_empty_file(self, empty_file, capsys):
         with patch("sys.argv", ["QFile", str(empty_file)]):

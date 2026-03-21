@@ -9,33 +9,40 @@ from pathlib import Path
 from q2netcdf.QRecordType import RecordType
 from q2netcdf.QVersion import QVersion
 
-# Real MRI files from the RIOT deployment
-MRI_DIR = Path(__file__).parent.parent.parent / "RIOT" / "osu685" / "from-glider"
+# Test data committed to repo in tests/data/
+DATA_DIR = Path(__file__).parent / "data"
 
-# Pick a file with data records (2KB, 198 records)
-MRI_FILE = MRI_DIR / "02880000.mri"
-# A smaller file (453 bytes, 39 records)
-MRI_FILE_SMALL = MRI_DIR / "02830000.mri"
+# v1.3 MRI files
+MRI_FILE = DATA_DIR / "v13_131records.mri"  # 1.3KB, 131 records
+MRI_FILE_SMALL = DATA_DIR / "v13_39records.mri"  # 453B, 39 records
 
-
-def _have_mri_files() -> bool:
-    return MRI_FILE.exists()
+# v1.2 Q-files with spectra
+QFILE_V12 = DATA_DIR / "v12_15records.q"  # 3.9KB, 15 records, Nc=25 Ns=4 Nf=18
+QFILE_V12_SMALL = DATA_DIR / "v12_14records.q"  # 3.7KB, 14 records
 
 
 @pytest.fixture
 def mri_file():
-    """Path to a real MRI file with data records."""
-    if not MRI_FILE.exists():
-        pytest.skip("MRI test files not found")
+    """Path to a real v1.3 MRI file with data records."""
     return MRI_FILE
 
 
 @pytest.fixture
 def mri_file_small():
-    """Path to a small real MRI file."""
-    if not MRI_FILE_SMALL.exists():
-        pytest.skip("MRI test files not found")
+    """Path to a small real v1.3 MRI file."""
     return MRI_FILE_SMALL
+
+
+@pytest.fixture
+def qfile_v12():
+    """Path to a real v1.2 Q-file with channels and spectra."""
+    return QFILE_V12
+
+
+@pytest.fixture
+def qfile_v12_small():
+    """Path to a second real v1.2 Q-file."""
+    return QFILE_V12_SMALL
 
 
 @pytest.fixture

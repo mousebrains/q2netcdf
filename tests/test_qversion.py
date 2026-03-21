@@ -1,5 +1,7 @@
 """Tests for QVersion enum."""
 
+import pytest
+
 from q2netcdf.QVersion import QVersion
 
 
@@ -17,5 +19,5 @@ def test_version_isV12():
 
 def test_version_float_values():
     """Test that version values are correct floats."""
-    assert abs(QVersion.v12.value - 1.2) < 0.01
-    assert abs(QVersion.v13.value - 1.3) < 0.01
+    assert QVersion.v12.value == pytest.approx(1.2)
+    assert QVersion.v13.value == pytest.approx(1.3)

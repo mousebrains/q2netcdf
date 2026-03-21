@@ -1,5 +1,7 @@
 *.mri
 *.q
+!tests/data/*.mri
+!tests/data/*.q
 *.p
 osu68?
 __pycache__
