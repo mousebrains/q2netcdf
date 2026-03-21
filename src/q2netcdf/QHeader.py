@@ -7,6 +7,7 @@
 import struct
 import logging
 import numpy as np
+from typing import BinaryIO
 from .QConfig import QConfig
 from .QVersion import QVersion
 from .QRecordType import RecordType
@@ -28,7 +29,7 @@ class QHeader:
     """
 
     @classmethod
-    def chkIdent(cls, fp) -> bool | None:
+    def chkIdent(cls, fp: BinaryIO) -> bool | None:
         n = 2
         buffer = fp.read(n)
         if len(buffer) != n:
@@ -38,14 +39,14 @@ class QHeader:
         return ident == RecordType.HEADER.value
 
     @staticmethod
-    def _read_exact(fp, sz: int, fn: str, what: str) -> bytes:
+    def _read_exact(fp: BinaryIO, sz: int, fn: str, what: str) -> bytes:
         """Read exactly sz bytes from fp, raising EOFError on short read."""
         buffer = fp.read(sz)
         if len(buffer) != sz:
             raise EOFError(f"EOF while reading {what}, {len(buffer)} != {sz}, in {fn}")
         return buffer
 
-    def __init__(self, fp, fn: str) -> None:
+    def __init__(self, fp: BinaryIO, fn: str) -> None:
         self.filename = fn
         hdrSize = 0
 
@@ -81,7 +82,7 @@ class QHeader:
         self.dataSize = struct.unpack("<H", buffer)[0]
         self.hdrSize = hdrSize
 
-    def _read_identifiers(self, fp, fn: str) -> int:
+    def _read_identifiers(self, fp: BinaryIO, fn: str) -> int:
         """Read channel identifiers, spectra identifiers, and frequencies."""
         bytesRead = 0
 
@@ -109,7 +110,7 @@ class QHeader:
 
         return bytesRead
 
-    def _read_config(self, fp, fn: str) -> int:
+    def _read_config(self, fp: BinaryIO, fn: str) -> int:
         """Read the configuration record (v1.2 or v1.3 format)."""
         assert self.version is not None  # Validated in __init__ before this call
         bytesRead = 0
@@ -182,7 +183,12 @@ def main() -> None:
         fn = os.path.abspath(os.path.expanduser(fn))
         print("filename:", fn)
         with open(fn, "rb") as fp:
-            hdr = QHeader(fp, fn)
+            try:
+                hdr = QHeader(fp, fn)
+            except (EOFError, ValueError, NotImplementedError) as e:
+                logging.warning("Skipping %s: %s", fn, e)
+                continue
+
             print(f"File version: {hdr.version}")
             print("Time:", hdr.time)
 

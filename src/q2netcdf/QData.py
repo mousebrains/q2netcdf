@@ -7,7 +7,7 @@
 import struct
 import numpy as np
 import logging
-from typing import Any
+from typing import Any, BinaryIO
 from .QHeader import QHeader
 from .QHexCodes import QHexCodes
 from .QRecordType import RecordType
@@ -63,7 +63,10 @@ class QRecord:
         msg = []
         msg.append(f"Record #: {self.number}")
         msg.append(f"Error: {self.error}")
-        msg.append(f"Time: {self.t0} to {self.t1}")
+        if self.t1 is not None:
+            msg.append(f"Time: {self.t0} to {self.t1}")
+        else:
+            msg.append(f"Time: {self.t0}")
         msg.append(f"Channels: {self.channels}")
         msg.append(f"Spectra: {self.spectra}")
         return "\n".join(msg)
@@ -150,7 +153,7 @@ class QData:
             self.__format = "<He" + ("e" * hdr.Nc) + ("e" * hdr.Ns * hdr.Nf)
 
     @classmethod
-    def chkIdent(cls, fp) -> bool | None:
+    def chkIdent(cls, fp: BinaryIO) -> bool | None:
         n = 2
         buffer = fp.read(n)
         if len(buffer) != n:
@@ -159,7 +162,7 @@ class QData:
         fp.seek(-n, 1)  # Backup n bytes
         return ident == RecordType.DATA.value
 
-    def load(self, fp) -> QRecord | None:
+    def load(self, fp: BinaryIO) -> QRecord | None:
         hdr = self.__hdr
         buffer = fp.read(hdr.dataSize)
         if len(buffer) != hdr.dataSize:

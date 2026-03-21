@@ -511,11 +511,10 @@ class QHexCodes:
         return "\n".join(msg)
 
     @staticmethod
-    def __fixName(name: str | Any, cnt: int) -> str:
+    def __fixName(name: str | list[str], cnt: int) -> str:
         if isinstance(name, str):
             if not name.endswith("_"):
                 return name
-            cnt = cnt  # 0-15 -> 1-16
             return f"{name}{cnt}"
 
         if isinstance(name, (list, tuple)):

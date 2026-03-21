@@ -3,6 +3,7 @@
 #
 # Feb-2025, Pat Welch, pat@mousebrains.com
 
+import logging
 import re
 import numpy as np
 import json
@@ -82,16 +83,13 @@ class QConfig:
                 if matches:
                     self.__dict[matches[1]] = self.__parseValue(matches[2])
             except (UnicodeDecodeError, ValueError):
-                pass
+                logging.debug("Skipping unparseable v1.2 config line: %s", line)
 
     def __splitConfigv13(self) -> None:
         self.__dict = json.loads(self.__config)
 
     def __len__(self) -> int:
         return len(self.__config)
-
-    def size(self) -> int:
-        return len(self)
 
     def raw(self) -> bytes:
         return self.__config

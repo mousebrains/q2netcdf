@@ -41,14 +41,13 @@ def loadQfile(fn: str) -> xr.Dataset | None:
                     break  # EOF
                 data = QData(hdr)
             elif QData.chkIdent(fp):
-                assert data is not None, "Data cannot be read before header"
-                assert hdr is not None, "Header must exist before data"
+                if data is None or hdr is None:
+                    raise ValueError(f"Data record before header in {fn}")
 
                 qrecord = data.load(fp)
                 if qrecord is None:
                     break  # EOF
                 record, attrs = qrecord.split(hdr)
-                qFreq = False
                 t0 = record["time"]
                 del record["time"]
                 values: dict[str, Any] = {}
@@ -113,6 +112,43 @@ def loadQfile(fn: str) -> xr.Dataset | None:
     ds = ds.assign(toAdd)
 
     return ds
+
+
+def mergeDatasets(frames: list[xr.Dataset]) -> xr.Dataset:
+    """
+    Merge multiple Q-file Datasets into a single Dataset.
+
+    Time-indexed variables are concatenated along 'time', while per-file
+    metadata variables (on the 'ftime' dimension) are concatenated along
+    'ftime', then the two groups are merged.
+
+    Args:
+        frames: List of Datasets from loadQfile()
+
+    Returns:
+        Single merged Dataset
+
+    Raises:
+        ValueError: If frames is empty
+    """
+    if not frames:
+        raise ValueError("Cannot merge empty list of Datasets")
+
+    if len(frames) == 1:
+        return frames[0]
+
+    time_vars = [n for n in frames[0].data_vars if "time" in frames[0][n].dims]
+    ftime_vars = [n for n in frames[0].data_vars if "ftime" in frames[0][n].dims]
+
+    time_frames = [
+        f[time_vars].drop_vars(["ftime", "despike"], errors="ignore") for f in frames
+    ]
+    ftime_frames = [f[ftime_vars].assign_coords(ftime=f.ftime) for f in frames]
+
+    ds_time = xr.concat(time_frames, "time")
+    ds_ftime = xr.concat(ftime_frames, "ftime")
+    ds_ftime = ds_ftime.assign_coords(despike=np.arange(3))
+    return xr.merge([ds_time, ds_ftime])
 
 
 def cfCompliant(ds: xr.Dataset) -> xr.Dataset:
@@ -270,10 +306,7 @@ def main() -> None:
         logging.info("No data found")
         sys.exit(0)
 
-    if len(frames) == 1:
-        ds = frames[0]
-    else:
-        ds = xr.merge(frames, compat="override", join="outer")
+    ds = mergeDatasets(frames)
 
     ds = cfCompliant(ds)
     ds = addEncoding(ds, args.compressionLevel)

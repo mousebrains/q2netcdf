@@ -84,6 +84,9 @@ class QFile:
         """
         Generator yielding data records from the Q-file.
 
+        Handles files with multiple header/data segments by detecting
+        embedded header records and re-initializing the parser.
+
         Yields:
             QRecord objects containing time, channels, and spectra data
 
@@ -95,11 +98,19 @@ class QFile:
                 f"A header must be read before any data records in {self.__fn}"
             )
 
+        fp = self.__fp
+        assert fp is not None  # Guaranteed by header() call above
         while True:
-            record = self.__data.load(self.__fp)
-            if record is None:
+            if QHeader.chkIdent(fp):
+                hdr = QHeader(fp, self.__fn)
+                self.__data = QData(hdr)
+            elif QData.chkIdent(fp):
+                record = self.__data.load(fp)
+                if record is None:
+                    break
+                yield record
+            else:
                 break
-            yield record
 
     def prettyRecord(self, record: QRecord) -> str | None:
         """
@@ -122,7 +133,6 @@ class QFile:
             - valid: Overall validity (bool)
             - version: Q-file version or None
             - records_readable: Successfully read records (int)
-            - records_failed: Failed records (int)
             - unknown_identifiers: Unrecognized sensor IDs (set)
             - errors: Error messages (list)
         """
@@ -132,7 +142,6 @@ class QFile:
             "valid": True,
             "version": None,
             "records_readable": 0,
-            "records_failed": 0,
             "unknown_identifiers": set(),
             "errors": [],
         }
@@ -169,13 +178,6 @@ class QFile:
         except Exception as e:
             results["valid"] = False
             results["errors"].append(f"Unexpected error: {e}")
-
-        # Overall validity check
-        if results["records_failed"] > 0:
-            results["valid"] = False
-            results["errors"].append(
-                f"{results['records_failed']} records failed to read"
-            )
 
         return results
 
@@ -218,9 +220,6 @@ def main() -> None:
 
                     print(f"  Version: {results['version']}")
                     print(f"  Records readable: {results['records_readable']}")
-
-                    if results["records_failed"] > 0:
-                        print(f"  Records failed: {results['records_failed']}")
 
                     if results["unknown_identifiers"]:
                         print(

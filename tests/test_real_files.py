@@ -171,7 +171,6 @@ class TestQFileRealFile:
             assert results["valid"] is True
             assert results["version"] == QVersion.v13
             assert results["records_readable"] > 0
-            assert results["records_failed"] == 0
             assert len(results["errors"]) == 0
 
     def test_pretty_record(self, mri_file):

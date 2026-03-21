@@ -146,11 +146,11 @@ class TestQConfigSync:
         assert list(standalone.keys()) == list(merge.keys())
         np.testing.assert_array_equal(standalone["values"], merge["values"])
 
-    def test_size_and_raw_match(self):
+    def test_len_and_raw_match(self):
         data = b'{"test": 1}'
         s = StandaloneQConfig(data, StandaloneQVersion.v13)
         m = MergeQConfig(data, MergeQVersion.v13)
-        assert s.size() == m.size()
+        assert len(s) == len(m)
         assert s.raw() == m.raw()
 
 

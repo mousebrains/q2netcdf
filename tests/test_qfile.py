@@ -1,5 +1,6 @@
 """Tests for QFile reader."""
 
+import math
 import pytest
 from pathlib import Path
 from q2netcdf.QFile import QFile
@@ -91,3 +92,22 @@ class TestQFile:
                 assert record.spectra.shape == expected_shape, (
                     f"Expected spectra shape {expected_shape}, got {record.spectra.shape}"
                 )
+
+    def test_multiheader_reads_all_segments(self, synthetic_multiheader_qfile):
+        """Test that data() reads across multiple header/data segments."""
+        with QFile(str(synthetic_multiheader_qfile)) as qf:
+            qf.header()
+            records = list(qf.data())
+
+            assert len(records) == 15  # 5 from segment 1 + 10 from segment 2
+
+            # First 5 records: surface, epsilon is NaN
+            for rec in records[:5]:
+                assert math.isnan(rec.channels[0])  # e_2
+                assert math.isnan(rec.channels[2])  # e_1
+
+            # Last 10 records: profiling, epsilon is valid
+            for rec in records[5:]:
+                assert not math.isnan(rec.channels[0])  # e_2
+                assert not math.isnan(rec.channels[2])  # e_1
+                assert rec.channels[1] > 0  # pressure > 0

@@ -13,7 +13,7 @@ import logging
 import struct
 import os
 import numpy as np
-from typing import Any, IO
+from typing import Any, BinaryIO
 from .QHeader import QHeader
 from .QHexCodes import QHexCodes
 from .QVersion import QVersion
@@ -193,7 +193,7 @@ class QReduce:
         record += data.tobytes()
         return record
 
-    def reduceFile(self, ofp: IO[bytes]) -> int:
+    def reduceFile(self, ofp: BinaryIO) -> int:
         """
         Write reduced Q-file to output file pointer.
 
@@ -215,7 +215,7 @@ class QReduce:
                     totSize += ofp.write(record)
             return totSize
 
-    def decimate(self, ofp: IO[bytes], indices: np.ndarray) -> int:
+    def decimate(self, ofp: BinaryIO, indices: np.ndarray) -> int:
         """
         Write decimated Q-file records to output file pointer.
 

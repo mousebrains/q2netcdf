@@ -61,7 +61,7 @@ class TestQConfig:
         config_data = b'{"test": 123}'
         qc = QConfig(config_data, QVersion.v13)
         assert qc.raw() == config_data
-        assert qc.size() == len(config_data)
+        assert len(qc) == len(config_data)
 
     def test_config_v13_json(self):
         config_data = b'{"key": "value", "number": 42}'

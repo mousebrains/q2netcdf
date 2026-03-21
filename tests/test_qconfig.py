@@ -44,7 +44,6 @@ class TestQConfig:
         config_str = b'{"test": 123}'
         qconfig = QConfig(config_str, QVersion.v13)
         assert len(qconfig) == len(config_str)
-        assert qconfig.size() == len(config_str)
 
     def test_raw_config(self):
         """Test raw config retrieval."""
