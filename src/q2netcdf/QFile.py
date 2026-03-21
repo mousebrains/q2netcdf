@@ -216,9 +216,9 @@ def main() -> None:
                     results = qf.validate()
 
                     if results["valid"]:
-                        print("✓ Q-file is valid")
+                        print("Q-file is valid")
                     else:
-                        print("✗ Q-file has issues")
+                        print("Q-file has issues")
 
                     print(f"  Version: {results['version']}")
                     print(f"  Records readable: {results['records_readable']}")
