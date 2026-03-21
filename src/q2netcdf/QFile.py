@@ -187,8 +187,12 @@ class QFile:
 def main() -> None:
     """Command-line interface for QFile."""
     from argparse import ArgumentParser
+    from . import __version__
 
     parser = ArgumentParser()
+    parser.add_argument(
+        "--version", action="version", version="%(prog)s " + __version__
+    )
     parser.add_argument("filename", type=str, nargs="+", help="Input filename(s)")
     parser.add_argument(
         "--validate", action="store_true", help="Validate Q-file integrity"

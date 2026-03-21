@@ -95,8 +95,12 @@ def main() -> None:
     from argparse import ArgumentParser
     from datetime import datetime, timezone
     import os.path
+    from . import __version__
 
     parser = ArgumentParser(description="Generate isdp.cfg for Rockland's MicroRider")
+    parser.add_argument(
+        "--version", action="version", version="%(prog)s " + __version__
+    )
     parser.add_argument(
         "--isdpConfig",
         type=str,

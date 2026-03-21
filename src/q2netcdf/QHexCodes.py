@@ -613,8 +613,12 @@ class QHexCodes:
 def main() -> None:
     """Command-line interface for QHexCodes."""
     from argparse import ArgumentParser
+    from . import __version__
 
     parser = ArgumentParser()
+    parser.add_argument(
+        "--version", action="version", version="%(prog)s " + __version__
+    )
     parser.add_argument("ident", type=str, nargs="*", help="hex ident(s) to look up")
     parser.add_argument(
         "--name", type=str, action="append", help="Name to translate to ident"

@@ -158,8 +158,12 @@ def main() -> None:
     from argparse import ArgumentParser
     import os.path
     from .QHexCodes import QHexCodes
+    from . import __version__
 
     parser = ArgumentParser()
+    parser.add_argument(
+        "--version", action="version", version="%(prog)s " + __version__
+    )
     parser.add_argument("filename", type=str, nargs="+", help="Input filename(s)")
     parser.add_argument("--config", action="store_false", help="Don't display config")
     parser.add_argument(

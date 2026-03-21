@@ -290,7 +290,12 @@ def addEncoding(ds: xr.Dataset, level: int = 5) -> xr.Dataset:
 
 def main() -> None:
     """Command-line interface for q2netcdf converter."""
+    from . import __version__
+
     parser = ArgumentParser()
+    parser.add_argument(
+        "--version", action="version", version="%(prog)s " + __version__
+    )
     parser.add_argument("qfile", nargs="+", type=str, help="Q filename(s)")
     parser.add_argument("--nc", type=str, required=True, help="Output NetCDF filename")
     parser.add_argument(

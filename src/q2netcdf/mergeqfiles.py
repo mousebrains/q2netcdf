@@ -1495,9 +1495,15 @@ def __chkNotNegativeFloat(val):
     raise ArgumentTypeError("{} is negative".format(val))
 
 
+__version__ = "0.4.2"
+
+
 def main() -> None:
     """Command-line interface for mergeqfiles."""
     parser = ArgumentParser()
+    parser.add_argument(
+        "--version", action="version", version="%(prog)s " + __version__
+    )
     parser.add_argument(
         "stime", type=float, help="Unix seconds for earliest sample, or 0 for now"
     )

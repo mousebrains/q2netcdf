@@ -253,8 +253,12 @@ def __chkExists(filename: str) -> str:
 def main() -> None:
     """Command-line interface for QReduce."""
     from argparse import ArgumentParser
+    from . import __version__
 
     parser = ArgumentParser(description="Reduce the size of a Q-file")
+    parser.add_argument(
+        "--version", action="version", version="%(prog)s " + __version__
+    )
     parser.add_argument("filename", type=__chkExists, help="Q-file to reduce")
     parser.add_argument("--output", type=str, help="Output file name")
     parser.add_argument(
