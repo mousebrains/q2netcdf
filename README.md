@@ -43,18 +43,16 @@ QFile data.q --logLevel INFO
 
 ## Installation
 
-### Using pipx (Recommended)
-
-The command-line scripts in this package may be installed using [pipx](https://pipx.pypa.io/stable/installation/):
+### From PyPI
 
 ```bash
-python3 -m pipx install git+https://github.com/mousebrains/q2netcdf
+pip install q2netcdf
 ```
 
-To update to the latest version:
+Or using [pipx](https://pipx.pypa.io/stable/installation/) for the command-line tools:
 
 ```bash
-python3 -m pipx install --force git+https://github.com/mousebrains/q2netcdf
+pipx install q2netcdf
 ```
 
 ### From Source
@@ -90,6 +88,26 @@ For deployment on Rockland Scientific MicroRider instruments:
 10. You can modify data/mergeqfiles.cfg to adjust the information included in the .mri file sent to the glider.
 
 This is designed for integration with [TWR's Slocum Glider uRider proglet](https://www.teledynemarine.com/brands/webb-research/slocum-glider).
+
+## Python API
+
+```python
+from q2netcdf import QFile
+
+# Stream records from a Q-file
+with QFile("data.q") as qf:
+    header = qf.header()
+    print(header.channels(), header.spectra())
+    for record in qf.data():
+        print(record.stime, record.channels)
+
+# Convert a Q-file to an xarray Dataset
+from q2netcdf.q2netcdf import loadQfile
+
+ds = loadQfile("data.q")
+print(ds)
+ds.to_netcdf("output.nc")
+```
 
 ## Usage Examples
 
@@ -161,7 +179,7 @@ ruff check src/ tests/    # Lint
 mypy src/                 # Type check
 ```
 
-To run a module for testing `python3 -m src.q2netcdf.QHeader --help`
+To run a module directly: `python3 -m q2netcdf.QHeader --help`
 
 ## Additional Documentation
 
@@ -169,11 +187,10 @@ To run a module for testing `python3 -m src.q2netcdf.QHeader --help`
 - [CONTRIBUTING.md](docs/CONTRIBUTING.md) - Contributor guidelines and development setup
 - [SECURITY.md](docs/SECURITY.md) - Security policy and vulnerability reporting
 - [QFILE_FORMAT.md](docs/QFILE_FORMAT.md) - Q-file binary format specification
-- [CLAUDE.md](CLAUDE.md) - AI assistant guidance for working with this codebase
 
 ## License
 
-See LICENSE file for details.
+This project is licensed under the [GNU General Public License v3.0 or later](LICENSE).
 
 ## Author
 
