@@ -10,6 +10,11 @@ on:
         required: false
         type: boolean
         default: false
+      publish_testpypi:
+        description: 'Publish to TestPyPI'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -41,6 +46,30 @@ jobs:
       with:
         name: python-package-distributions
         path: dist/
+
+  publish-to-testpypi:
+    name: Publish to TestPyPI
+    if: github.event_name == 'workflow_dispatch' && inputs.publish_testpypi
+    needs:
+    - build
+    runs-on: ubuntu-latest
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/q2netcdf
+    permissions:
+      id-token: write
+
+    steps:
+    - name: Download all the dists
+      uses: actions/download-artifact@v6
+      with:
+        name: python-package-distributions
+        path: dist/
+
+    - name: Publish distribution to TestPyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        repository-url: https://test.pypi.org/legacy/
 
   publish-to-pypi:
     name: Publish to PyPI

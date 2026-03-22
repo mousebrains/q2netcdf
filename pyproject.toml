@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "q2netcdf"
-version = "0.4.3"
+version = "0.4.4"
 authors = [{name="Pat Welch", email="pat@mousebrains.com"}]
 maintainers = [{name="Pat Welch", email="pat@mousebrains.com"}]
 description = "Manipulate Rockland Scientific's Q-files"
@@ -37,6 +37,8 @@ dev = [
 
 [project.urls]
 Repository = "https://github.com/mousebrains/q2netcdf"
+Changelog = "https://github.com/mousebrains/q2netcdf/blob/main/docs/CHANGELOG.md"
+Issues = "https://github.com/mousebrains/q2netcdf/issues"
 
 [project.scripts]
 q2netcdf = "q2netcdf.q2netcdf:main"
