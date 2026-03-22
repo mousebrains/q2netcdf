@@ -3,6 +3,7 @@
 [![Python Version](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![CI](https://github.com/mousebrains/q2netcdf/actions/workflows/ci.yml/badge.svg)](https://github.com/mousebrains/q2netcdf/actions/workflows/ci.yml)
 [![Coverage](https://codecov.io/gh/mousebrains/q2netcdf/branch/main/graph/badge.svg)](https://codecov.io/gh/mousebrains/q2netcdf)
+[![PyPI](https://img.shields.io/pypi/v/q2netcdf)](https://pypi.org/project/q2netcdf/)
 
 > **Note**: The package requires Python 3.10+, but the standalone `mergeqfiles` script is compatible with Python 3.7+ for deployment on legacy systems (e.g., MicroRider instruments).
 
