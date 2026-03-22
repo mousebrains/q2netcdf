@@ -7,6 +7,61 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.3] - 2025-03-22
+
+### Changed
+- **22x speedup for `loadQfile()`**: Replaced per-record `xr.Dataset` construction + `xr.concat` with batch numpy array stacking (`np.stack`) and single `xr.Dataset` build. The bottleneck was xarray Python overhead (96% of per-file time), not I/O (4%).
+- Handles multi-header Q-files by processing segments independently, then concatenating segments (typically 1-2) instead of individual records (100+)
+
+### Added
+- 120 new tests across all modules, increasing test coverage from 78% to 96%
+  - Error paths: unknown identifiers, data-before-header, truncated files, malformed binary data
+  - `mergeqfiles.py`: QReduce class, `decimateFiles()`, `reduceFiles()`, `reduceAndDecimate()`, `scanDirectory()`, argument validators, CLI `main()`
+  - `QReduce.py`: v1.2 spectra reduction, `decimate()`, `loadConfig()` validation, `__chkExists()`
+  - `QHexCodes.py`: list-type name overflow, `__repr__()`
+  - `mkISDPcfg.py`: single-quote fallback, both-quotes error
+  - `QFile.py`: `validate()` with unknown identifiers, EOF errors, closed file pointer
+  - `QConfig.py`: invalid UTF-8 in v1.2 config parsing
+- Documented planned `mergeqfiles.py` performance optimizations in CLAUDE.md for future hardware testing
+
+## [0.4.2] - 2025-03-18
+
+### Changed
+- Added `--version` flag to all 7 CLI entry points
+- CF-1.13 compliant metadata in NetCDF output
+- QHexCodes fixes for edge cases in sensor mapping
+- Committed test data files (v1.2 and v1.3 Q-files) to repository
+
+### Added
+- Roundtrip validation tests (Q-file → NetCDF → verify)
+- Tests for error handling, mismatched schemas across multi-file merge
+- Hardened error handling across main package with proper exception types
+
+### Fixed
+- Critical mergeqfiles bugs: version handling, `fsync` on output, crash recovery with temp files
+- Windows CI: replaced Unicode checkmark with ASCII in test output
+- Bumped GitHub Actions artifact actions to Node.js 24 compatible versions
+- Codecov action v5: renamed `file` input to `files`
+- Cancel in-progress CI runs on new pushes to same branch
+- Removed `.coverage` from repo, added to `.gitignore`
+
+## [0.4.1] - 2025-03-16
+
+### Changed
+- Decomposed QHeader into smaller, testable methods
+- Consolidated documentation into `docs/` directory
+- Applied ruff formatter across all source and test files
+
+### Added
+- PyPI trusted publishing workflow
+- Expanded test coverage to 77%
+- Multi-file merge and multi-header read support in QFile
+
+### Fixed
+- Multi-file merge correctness for mismatched channel sets
+- Multi-header file reads (files with multiple header/data segments)
+- Code quality improvements from Codex 5.2 review
+
 ## [0.4.0] - 2024-11-05
 
 ### Changed
@@ -122,6 +177,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[Unreleased]: https://github.com/mousebrains/q2netcdf/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/mousebrains/q2netcdf/compare/v0.4.3...HEAD
+[0.4.3]: https://github.com/mousebrains/q2netcdf/compare/v0.4.2...v0.4.3
+[0.4.2]: https://github.com/mousebrains/q2netcdf/compare/v0.4.1...v0.4.2
+[0.4.1]: https://github.com/mousebrains/q2netcdf/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/mousebrains/q2netcdf/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/mousebrains/q2netcdf/releases/tag/v0.3.0
