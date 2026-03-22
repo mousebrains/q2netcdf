@@ -15,7 +15,85 @@ import sys
 import struct
 from typing import Any
 from .QHeader import QHeader
-from .QData import QData
+from .QData import QData, QRecord
+from .QHexCodes import QHexCodes
+
+
+def _buildSegmentDataset(
+    hdr: QHeader,
+    qrecords: list[QRecord],
+    hexMap: QHexCodes,
+) -> xr.Dataset:
+    """Build a single xr.Dataset from a header and its associated records.
+
+    Instead of creating one Dataset per record and concatenating, this
+    builds numpy arrays across all records first, then constructs a
+    single Dataset.
+    """
+    # Times
+    times = np.array([r.t0 for r in qrecords])
+
+    data_vars: dict[str, Any] = {}
+
+    # v1.2 extra fields (record number, error code, end time)
+    if qrecords[0].t1 is not None:
+        data_vars["t1"] = (
+            "time",
+            np.array([r.t1 for r in qrecords]),
+            {"long_name": "timeStop"},
+        )
+    if qrecords[0].number is not None:
+        data_vars["record"] = (
+            "time",
+            np.array([r.number for r in qrecords]),
+            {"long_name": "recordNumber"},
+        )
+    if qrecords[0].error is not None:
+        data_vars["error"] = (
+            "time",
+            np.array([r.error for r in qrecords]),
+            {"long_name": "errorCode"},
+        )
+
+    # Stack all channel arrays: (n, Nc)
+    if hdr.Nc > 0:
+        all_channels = np.stack([r.channels for r in qrecords])
+        for idx, ident in enumerate(hdr.channels):
+            name = hexMap.name(ident)
+            if name:
+                data_vars[name] = (
+                    "time",
+                    all_channels[:, idx],
+                    hexMap.attributes(ident),
+                )
+            else:
+                logging.warning(
+                    "Unknown channel identifier %#06x at index %d, skipping",
+                    ident,
+                    idx,
+                )
+
+    # Stack all spectra arrays: (n, Ns, Nf)
+    coords: dict[str, Any] = {"time": times}
+    if hdr.Ns > 0 and hdr.Nf > 0:
+        all_spectra = np.stack([r.spectra for r in qrecords])
+        coords["freq"] = list(hdr.frequencies)
+        for idx, ident in enumerate(hdr.spectra):
+            name = hexMap.name(ident)
+            if name:
+                data_vars[name] = (
+                    ("time", "freq"),
+                    all_spectra[:, idx, :],
+                    hexMap.attributes(ident),
+                )
+            else:
+                logging.warning(
+                    "Unknown spectra identifier %#06x at index %d, skipping",
+                    ident,
+                    idx,
+                )
+
+    return xr.Dataset(data_vars=data_vars, coords=coords)
 
 
 def loadQfile(fn: str) -> xr.Dataset | None:
@@ -29,17 +107,22 @@ def loadQfile(fn: str) -> xr.Dataset | None:
         xarray.Dataset with time-indexed data variables for all channels
         and spectra, or None if file is invalid/empty
     """
-    records = []
+    # Parse binary file into segments: each segment = (header, [records])
+    segments: list[tuple[QHeader, list[QRecord]]] = []
     hdr: QHeader | None = None
     data: QData | None = None
+    seg_records: list[QRecord] = []
 
     with open(fn, "rb") as fp:
         while True:
             if QHeader.chkIdent(fp):
+                if hdr is not None and seg_records:
+                    segments.append((hdr, seg_records))
                 hdr = QHeader(fp, fn)
                 if hdr is None:
                     break  # EOF
                 data = QData(hdr)
+                seg_records = []
             elif QData.chkIdent(fp):
                 if data is None or hdr is None:
                     raise ValueError(f"Data record before header in {fn}")
@@ -47,32 +130,7 @@ def loadQfile(fn: str) -> xr.Dataset | None:
                 qrecord = data.load(fp)
                 if qrecord is None:
                     break  # EOF
-                record, attrs = qrecord.split(hdr)
-                t0 = record["time"]
-                del record["time"]
-                values: dict[str, Any] = {}
-                qFreq = False
-                for key in record:
-                    val = record[key]
-                    if np.isscalar(val):
-                        values[key] = (
-                            "time",
-                            [val],
-                            attrs[key] if key in attrs else None,
-                        )
-                    else:
-                        qFreq = True
-                        values[key] = (
-                            ("time", "freq"),
-                            val.reshape(1, -1),
-                            attrs[key] if key in attrs else None,
-                        )
-                coords: dict[str, Any] = {"time": [t0]}
-                if qFreq:
-                    coords["freq"] = list(hdr.frequencies)
-                ds = xr.Dataset(data_vars=values, coords=coords)
-
-                records.append(ds)
+                seg_records.append(qrecord)
             else:
                 buffer = fp.read(2)
                 if len(buffer) != 2:
@@ -83,24 +141,33 @@ def loadQfile(fn: str) -> xr.Dataset | None:
                 )
                 break
 
-    if not hdr:
+    # Flush final segment
+    if hdr is not None and seg_records:
+        segments.append((hdr, seg_records))
+
+    if not segments:
         logging.warning(f"No header found in {fn}")
         return None
 
-    if not records:
-        logging.warning(f"No records found in {fn}")
-        return None
+    # Build one Dataset per segment using batch numpy construction
+    hexMap = QHexCodes()
+    datasets = [_buildSegmentDataset(h, recs, hexMap) for h, recs in segments]
 
-    ds = xr.concat(records, "time")
+    if len(datasets) == 1:
+        ds = datasets[0]
+    else:
+        ds = xr.concat(datasets, "time")
 
+    # Add file-level metadata
+    last_hdr = segments[-1][0]
     ftime = ds.time.data.min()
     ds = ds.assign_coords(ftime=[ftime], despike=np.arange(3))
 
-    if hdr.version is None:
+    if last_hdr.version is None:
         raise RuntimeError("QHeader.version must be set after reading header")
-    toAdd: dict[str, Any] = dict(fileVersion=("ftime", [hdr.version.value]))
+    toAdd: dict[str, Any] = dict(fileVersion=("ftime", [last_hdr.version.value]))
 
-    config = hdr.config.config()
+    config = last_hdr.config.config()
     for key in config:
         val = config[key]
         if np.isscalar(val):

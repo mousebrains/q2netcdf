@@ -1,11 +1,19 @@
 """Tests for q2netcdf conversion module."""
 
+import io
+import logging
 import math
+import struct
 import numpy as np
 import pytest
 import xarray as xr
+from unittest.mock import MagicMock
 
 from q2netcdf.q2netcdf import loadQfile, mergeDatasets, cfCompliant, addEncoding
+from q2netcdf.QData import QData, QRecord
+from q2netcdf.QHeader import QHeader
+from q2netcdf.QRecordType import RecordType
+from q2netcdf.QVersion import QVersion
 
 
 class TestLoadQfile:
@@ -443,3 +451,304 @@ class TestRealFileRoundTrip:
         assert len(ds2.ftime) == 2
         assert "pressure" in ds2
         ds2.close()
+
+
+class TestLoadQfileEdgeCases:
+    """Tests for loadQfile edge cases: unknown idents, data-before-header, etc."""
+
+    def _build_v13_header(
+        self, channel_idents: list[int], config_str: str = "{}"
+    ) -> bytes:
+        """Helper to build a minimal v1.3 header."""
+        Nc = len(channel_idents)
+        header = bytearray()
+        header += struct.pack("<H", RecordType.HEADER.value)
+        header += struct.pack("<f", QVersion.v13.value)
+        dt_ms = int(
+            np.datetime64("2025-01-01").astype("datetime64[ms]").astype(int)
+        )
+        header += struct.pack("<Q", dt_ms)
+        header += struct.pack("<HHH", Nc, 0, 0)  # Nc, Ns=0, Nf=0
+        for ident in channel_idents:
+            header += struct.pack("<H", ident)
+        header += struct.pack("<H", len(config_str))
+        header += config_str.encode("utf-8")
+        data_size = 2 + 2 + (Nc * 2)  # ident + stime + channels
+        header += struct.pack("<H", data_size)
+        return bytes(header)
+
+    def _build_v13_data_record(self, channel_values: list[float]) -> bytes:
+        """Helper to build a v1.3 data record."""
+        rec = bytearray()
+        rec += struct.pack("<H", RecordType.DATA.value)
+        rec += struct.pack("<e", 0.0)  # stime
+        for val in channel_values:
+            rec += struct.pack("<e", val)
+        return bytes(rec)
+
+    def test_unknown_channel_identifier(self, tmp_path, caplog):
+        """Line 70: Unknown channel identifier logs warning and skips it."""
+        # Use 0xFFFF as an unknown channel identifier alongside a known one
+        header = self._build_v13_header([0x160, 0xFFFF])
+        data = self._build_v13_data_record([100.0, 42.0])
+
+        f = tmp_path / "unknown_channel.q"
+        f.write_bytes(header + data)
+
+        with caplog.at_level(logging.WARNING):
+            ds = loadQfile(str(f))
+
+        assert ds is not None
+        assert "pressure" in ds
+        # The unknown channel should have been skipped
+        assert any("Unknown channel identifier" in r.message for r in caplog.records)
+
+    def test_unknown_spectra_identifier(self, tmp_path, caplog):
+        """Line 90: Unknown spectra identifier logs warning and skips it."""
+        # Build a header with known channels and an unknown spectra
+        Nc, Ns, Nf = 1, 1, 2
+        header = bytearray()
+        header += struct.pack("<H", RecordType.HEADER.value)
+        header += struct.pack("<f", QVersion.v13.value)
+        dt_ms = int(
+            np.datetime64("2025-01-01").astype("datetime64[ms]").astype(int)
+        )
+        header += struct.pack("<Q", dt_ms)
+        header += struct.pack("<HHH", Nc, Ns, Nf)
+        header += struct.pack("<H", 0x160)  # pressure channel
+        header += struct.pack("<H", 0xFFFF)  # unknown spectra
+        header += struct.pack("<ee", 1.0, 2.0)  # frequencies
+        config_str = "{}"
+        header += struct.pack("<H", len(config_str))
+        header += config_str.encode("utf-8")
+        data_size = 2 + 2 + (Nc * 2) + (Ns * Nf * 2)
+        header += struct.pack("<H", data_size)
+
+        data = bytearray()
+        data += struct.pack("<H", RecordType.DATA.value)
+        data += struct.pack("<e", 0.0)  # stime
+        data += struct.pack("<e", 100.0)  # pressure
+        data += struct.pack("<ee", 0.5, 0.6)  # spectra values
+
+        f = tmp_path / "unknown_spectra.q"
+        f.write_bytes(bytes(header) + bytes(data))
+
+        with caplog.at_level(logging.WARNING):
+            ds = loadQfile(str(f))
+
+        assert ds is not None
+        assert "pressure" in ds
+        assert any("Unknown spectra identifier" in r.message for r in caplog.records)
+
+    def test_data_record_before_header(self, tmp_path):
+        """Line 128: Data record identifier before any header raises ValueError."""
+        # Write a data record identifier as the first thing in the file
+        content = bytearray()
+        content += struct.pack("<H", RecordType.DATA.value)
+        content += b"\x00" * 20  # some padding
+
+        f = tmp_path / "data_before_header.q"
+        f.write_bytes(bytes(content))
+
+        with pytest.raises(ValueError, match="Data record before header"):
+            loadQfile(str(f))
+
+    def test_unsupported_identifier(self, tmp_path, caplog):
+        """Lines 138-142: Unsupported identifier warns and breaks."""
+        # Write a valid header + data record, then an unknown identifier
+        header = self._build_v13_header([0x160])
+        data = self._build_v13_data_record([100.0])
+        # Then an unsupported identifier
+        unsupported = struct.pack("<H", 0xABCD)
+
+        f = tmp_path / "unsupported_ident.q"
+        f.write_bytes(header + data + unsupported)
+
+        with caplog.at_level(logging.WARNING):
+            ds = loadQfile(str(f))
+
+        assert ds is not None
+        assert len(ds.time) == 1
+        assert any("Unsupported identifier" in r.message for r in caplog.records)
+
+    def test_no_header_in_file(self, tmp_path, caplog):
+        """Lines 148-149: File with no header record returns None with warning."""
+        # Write bytes that are neither header nor data identifier
+        # 0xABCD is not 0x1729 (header) or 0x1657 (data)
+        content = struct.pack("<H", 0xABCD) + b"\x00" * 20
+
+        f = tmp_path / "no_header.q"
+        f.write_bytes(content)
+
+        with caplog.at_level(logging.WARNING):
+            result = loadQfile(str(f))
+
+        assert result is None
+        assert any("No header found" in r.message for r in caplog.records)
+
+
+class TestQDataCoverage:
+    """Tests for QData and QRecord uncovered lines."""
+
+    def _make_header(
+        self,
+        channel_idents: list[int],
+        spectra_idents: list[int] | None = None,
+        nf: int = 0,
+        version: QVersion = QVersion.v13,
+    ) -> QHeader:
+        """Build a real QHeader by constructing binary data and parsing it."""
+        Nc = len(channel_idents)
+        Ns = len(spectra_idents) if spectra_idents else 0
+        Nf = nf
+
+        buf = bytearray()
+        buf += struct.pack("<H", RecordType.HEADER.value)
+        buf += struct.pack("<f", version.value)
+        dt_ms = int(
+            np.datetime64("2025-01-01").astype("datetime64[ms]").astype(int)
+        )
+        buf += struct.pack("<Q", dt_ms)
+        buf += struct.pack("<HHH", Nc, Ns, Nf)
+        for ident in channel_idents:
+            buf += struct.pack("<H", ident)
+        if spectra_idents:
+            for ident in spectra_idents:
+                buf += struct.pack("<H", ident)
+        if Nf > 0:
+            for i in range(Nf):
+                buf += struct.pack("<e", float(i + 1))
+
+        config_str = "{}" if version == QVersion.v13 else ""
+        if version == QVersion.v12:
+            # v1.2 config has 4-byte header: 2-byte ident + 2-byte size
+            config_bytes = config_str.encode("utf-8")
+            buf += struct.pack("<HH", RecordType.CONFIG_V12.value, len(config_bytes))
+            buf += config_bytes
+        else:
+            config_bytes = config_str.encode("utf-8")
+            buf += struct.pack("<H", len(config_bytes))
+            buf += config_bytes
+
+        # data record size
+        if version.isV12():
+            data_size = 2 + 2 + 8 + 2 + 2 + (Nc * 2) + (Ns * Nf * 2)
+        else:
+            data_size = 2 + 2 + (Nc * 2) + (Ns * Nf * 2)
+        buf += struct.pack("<H", data_size)
+
+        fp = io.BytesIO(bytes(buf))
+        hdr = QHeader(fp, "test.q")
+        return hdr
+
+    def test_qrecord_repr_with_t1(self):
+        """Line 67: QRecord.__repr__ with t1 set (v1.2 records have t1)."""
+        hdr = self._make_header([0x160], version=QVersion.v12)
+        # v1.2 record: number, err, stime, etime
+        record = QRecord(hdr, 1, 0, 0.0, 1.0, [100.0])
+        repr_str = repr(record)
+        assert "Record #:" in repr_str
+        assert "to" in repr_str  # "Time: t0 to t1"
+
+    def test_qrecord_split_unknown_channel(self, caplog):
+        """Line 99: QRecord.split() with unknown channel logs warning."""
+        hdr = self._make_header([0xFFFF])
+        record = QRecord(hdr, None, None, 0.0, None, [100.0])
+
+        with caplog.at_level(logging.WARNING):
+            rec_dict, attrs = record.split(hdr)
+
+        assert "time" in rec_dict
+        # The unknown channel should not be in the dict
+        assert any("Unknown channel identifier" in r.message for r in caplog.records)
+
+    def test_qrecord_split_unknown_spectra(self, caplog):
+        """Line 112: QRecord.split() with unknown spectra logs warning."""
+        hdr = self._make_header([0x160], spectra_idents=[0xFFFF], nf=2)
+        items = [100.0, 0.5, 0.6]  # 1 channel + 2 spectra values
+        record = QRecord(hdr, None, None, 0.0, None, items)
+
+        with caplog.at_level(logging.WARNING):
+            rec_dict, attrs = record.split(hdr)
+
+        assert "pressure" in rec_dict
+        assert any("Unknown channel identifier" in r.message for r in caplog.records)
+
+    def test_qrecord_prettyrecord_unknown_channel(self):
+        """Line 139: prettyRecord with unknown channel falls back to hex name."""
+        hdr = self._make_header([0xFFFF])
+        record = QRecord(hdr, None, None, 0.0, None, [100.0])
+
+        output = record.prettyRecord(hdr)
+        assert "0xffff" in output
+
+    def test_qrecord_prettyrecord_unknown_spectra(self):
+        """Line 145: prettyRecord with unknown spectra falls back to hex name."""
+        hdr = self._make_header([0x160], spectra_idents=[0xFFFF], nf=2)
+        items = [100.0, 0.5, 0.6]
+        record = QRecord(hdr, None, None, 0.0, None, items)
+
+        output = record.prettyRecord(hdr)
+        assert "0xffff" in output
+
+    def test_qdata_version_none_raises(self):
+        """Line 162: QData.__init__() with version=None raises RuntimeError."""
+        hdr = MagicMock(spec=QHeader)
+        hdr.version = None
+
+        with pytest.raises(RuntimeError, match="version must be set"):
+            QData(hdr)
+
+    def test_qdata_load_struct_error(self):
+        """Lines 193-199: QData.load() with malformed data logs warning."""
+        hdr = self._make_header([0x160])
+        qdata = QData(hdr)
+
+        # The data size from header is the expected read size.
+        # Put enough bytes so read succeeds but struct.unpack fails
+        # by writing valid-length but wrong-format data.
+        # Actually, the simplest approach: write correct length but
+        # change the format string by mocking. Instead, let's create
+        # data that's exactly the right length (dataSize) but
+        # note that struct.unpack with 'e' format on 2 bytes should
+        # always work. We need to cause struct.error.
+        # Let's override the format to require more data than available.
+        qdata._QData__format = "<HHH"  # expects 6 bytes
+
+        # Create buffer with exactly hdr.dataSize bytes (should be 6 for 1 channel v1.3)
+        # But now format expects 3 unsigned shorts = 6 bytes, dataSize is also 6
+        # That won't cause struct.error. Let's make format expect more.
+        qdata._QData__format = "<HHHH"  # expects 8 bytes, but buffer is 6
+
+        fp = io.BytesIO(b"\x57\x16\x00\x00\x00\x00")  # 6 bytes
+
+        with pytest.raises(struct.error):
+            struct.unpack("<HHHH", fp.read(6))
+
+        # Reset the fp
+        fp.seek(0)
+
+        result = qdata.load(fp)
+        assert result is None  # Should return None after logging warning
+
+    def test_qdata_load_ident_mismatch(self, caplog):
+        """Line 213: QData.load() with data record identifier mismatch."""
+        hdr = self._make_header([0x160])
+        qdata = QData(hdr)
+
+        # Build a data record with wrong identifier but correct size
+        buf = bytearray()
+        buf += struct.pack("<H", 0x0000)  # Wrong identifier (not 0x1657)
+        buf += struct.pack("<e", 0.0)  # stime
+        buf += struct.pack("<e", 100.0)  # pressure value
+
+        fp = io.BytesIO(bytes(buf))
+
+        with caplog.at_level(logging.WARNING):
+            record = qdata.load(fp)
+
+        # Should still return a record (it logs warning but doesn't fail)
+        assert record is not None
+        assert any(
+            "Data record identifier mismatch" in r.message for r in caplog.records
+        )

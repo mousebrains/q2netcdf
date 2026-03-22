@@ -1495,7 +1495,7 @@ def __chkNotNegativeFloat(val):
     raise ArgumentTypeError("{} is negative".format(val))
 
 
-__version__ = "0.4.2"
+__version__ = "0.4.3"
 
 
 def main() -> None:

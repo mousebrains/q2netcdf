@@ -1,5 +1,7 @@
 """Tests for QHexCodes identifier mapping."""
 
+import pytest
+
 from q2netcdf.QHexCodes import QHexCodes
 
 
@@ -89,3 +91,36 @@ class TestQHexCodes:
         """Test that dissolved oxygen is spelled correctly (not disolved)."""
         attrs = QHexCodes.attributes(0x530)
         assert attrs["long_name"] == "dissolved_oxygen"
+
+    def test_list_name_cnt_too_large_raises_value_error(self):
+        """Test ValueError when cnt exceeds list-type name length.
+
+        0x110 maps to ["A0", "Ax", "Ay", "Az"] (4 items).
+        0x114 has cnt=4 which is >= len(list), so it should raise ValueError.
+        """
+        with pytest.raises(ValueError, match=r"cnt\(4\) >= \(4\)"):
+            QHexCodes.name(0x114)
+
+    def test_list_name_attributes_cnt_too_large_raises_value_error(self):
+        """Test ValueError in attributes() when cnt exceeds list-type attr values."""
+        with pytest.raises(ValueError, match=r"cnt\(4\) >= \(4\)"):
+            QHexCodes.attributes(0x114)
+
+    def test_repr(self):
+        """Test __repr__ returns formatted hex map string."""
+        hm = QHexCodes()
+        result = repr(hm)
+        assert isinstance(result, str)
+        # Should contain hex codes from the map
+        assert "0x0110" in result or "0x110" in result or "0x0610" in result
+        # Should have multiple lines (one per hex map entry)
+        lines = result.strip().split("\n")
+        assert len(lines) > 10
+
+    def test_list_name_valid_instances(self):
+        """Test that valid instances of list-type names work correctly."""
+        # 0x110 -> ["A0", "Ax", "Ay", "Az"]
+        assert QHexCodes.name(0x110) == "A0"
+        assert QHexCodes.name(0x111) == "Ax"
+        assert QHexCodes.name(0x112) == "Ay"
+        assert QHexCodes.name(0x113) == "Az"
