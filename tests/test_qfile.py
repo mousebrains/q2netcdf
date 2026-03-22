@@ -131,9 +131,7 @@ class TestQFileEdgeCases:
         header = bytearray()
         header += struct.pack("<H", RecordType.HEADER.value)
         header += struct.pack("<f", QVersion.v13.value)
-        dt_ms = int(
-            np.datetime64("2025-01-01").astype("datetime64[ms]").astype(int)
-        )
+        dt_ms = int(np.datetime64("2025-01-01").astype("datetime64[ms]").astype(int))
         header += struct.pack("<Q", dt_ms)
         header += struct.pack("<HHH", Nc, 0, 0)
         for ident in channel_idents:
@@ -155,9 +153,7 @@ class TestQFileEdgeCases:
     def test_data_fp_none_raises(self, tmp_path):
         """Line 104: data() raises RuntimeError when fp is None."""
         # Create a valid Q-file, read header, then close and null the fp
-        content = self._build_v13_qfile_bytes(
-            [0x160], [[0.0, 100.0]]
-        )
+        content = self._build_v13_qfile_bytes([0x160], [[0.0, 100.0]])
         f = tmp_path / "test_fp_none.q"
         f.write_bytes(content)
 
@@ -173,9 +169,7 @@ class TestQFileEdgeCases:
     def test_data_break_on_unknown_ident(self, tmp_path):
         """Line 112: data() breaks when QData.chkIdent returns False/None."""
         # Write valid header + one data record + unknown identifier bytes
-        content = self._build_v13_qfile_bytes(
-            [0x160], [[0.0, 100.0]]
-        )
+        content = self._build_v13_qfile_bytes([0x160], [[0.0, 100.0]])
         # Append an unsupported identifier (not header, not data)
         extra = struct.pack("<H", 0xABCD)
 
@@ -191,9 +185,7 @@ class TestQFileEdgeCases:
 
     def test_validate_unknown_channel_identifiers(self, tmp_path):
         """Line 168: validate() adds unknown channel identifiers to set."""
-        content = self._build_v13_qfile_bytes(
-            [0x160, 0xFFFF], [[0.0, 100.0, 42.0]]
-        )
+        content = self._build_v13_qfile_bytes([0x160, 0xFFFF], [[0.0, 100.0, 42.0]])
         f = tmp_path / "test_validate_unknown.q"
         f.write_bytes(content)
 
@@ -223,9 +215,7 @@ class TestQFileEdgeCases:
         buf = bytearray()
         buf += struct.pack("<H", RecordType.HEADER.value)
         buf += struct.pack("<f", 9.9)  # Invalid version
-        dt_ms = int(
-            np.datetime64("2025-01-01").astype("datetime64[ms]").astype(int)
-        )
+        dt_ms = int(np.datetime64("2025-01-01").astype("datetime64[ms]").astype(int))
         buf += struct.pack("<Q", dt_ms)
         buf += struct.pack("<HHH", 1, 0, 0)
         buf += struct.pack("<H", 0x160)
@@ -245,9 +235,7 @@ class TestQFileEdgeCases:
     def test_data_load_returns_none_breaks(self, tmp_path):
         """Line 112: data() breaks when QData.load returns None (truncated)."""
         # Write a valid header + one valid data record + a truncated data record
-        content = self._build_v13_qfile_bytes(
-            [0x160], [[0.0, 100.0]]
-        )
+        content = self._build_v13_qfile_bytes([0x160], [[0.0, 100.0]])
         # Add a truncated data record: data identifier + partial data
         truncated = struct.pack("<H", RecordType.DATA.value) + b"\x00"
 
@@ -268,9 +256,7 @@ class TestQFileEdgeCases:
         header = bytearray()
         header += struct.pack("<H", RecordType.HEADER.value)
         header += struct.pack("<f", QVersion.v13.value)
-        dt_ms = int(
-            np.datetime64("2025-01-01").astype("datetime64[ms]").astype(int)
-        )
+        dt_ms = int(np.datetime64("2025-01-01").astype("datetime64[ms]").astype(int))
         header += struct.pack("<Q", dt_ms)
         header += struct.pack("<HHH", Nc, Ns, Nf)
         header += struct.pack("<H", 0x160)  # pressure channel

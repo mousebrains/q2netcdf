@@ -464,9 +464,7 @@ class TestLoadQfileEdgeCases:
         header = bytearray()
         header += struct.pack("<H", RecordType.HEADER.value)
         header += struct.pack("<f", QVersion.v13.value)
-        dt_ms = int(
-            np.datetime64("2025-01-01").astype("datetime64[ms]").astype(int)
-        )
+        dt_ms = int(np.datetime64("2025-01-01").astype("datetime64[ms]").astype(int))
         header += struct.pack("<Q", dt_ms)
         header += struct.pack("<HHH", Nc, 0, 0)  # Nc, Ns=0, Nf=0
         for ident in channel_idents:
@@ -510,9 +508,7 @@ class TestLoadQfileEdgeCases:
         header = bytearray()
         header += struct.pack("<H", RecordType.HEADER.value)
         header += struct.pack("<f", QVersion.v13.value)
-        dt_ms = int(
-            np.datetime64("2025-01-01").astype("datetime64[ms]").astype(int)
-        )
+        dt_ms = int(np.datetime64("2025-01-01").astype("datetime64[ms]").astype(int))
         header += struct.pack("<Q", dt_ms)
         header += struct.pack("<HHH", Nc, Ns, Nf)
         header += struct.pack("<H", 0x160)  # pressure channel
@@ -605,9 +601,7 @@ class TestQDataCoverage:
         buf = bytearray()
         buf += struct.pack("<H", RecordType.HEADER.value)
         buf += struct.pack("<f", version.value)
-        dt_ms = int(
-            np.datetime64("2025-01-01").astype("datetime64[ms]").astype(int)
-        )
+        dt_ms = int(np.datetime64("2025-01-01").astype("datetime64[ms]").astype(int))
         buf += struct.pack("<Q", dt_ms)
         buf += struct.pack("<HHH", Nc, Ns, Nf)
         for ident in channel_idents:

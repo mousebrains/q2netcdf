@@ -439,7 +439,11 @@ class TestQReduceWithRealFiles:
 
     def test_init_v12_channels_only(self, qfile_v12):
         """QReduce with only channel selection on a v1.2 file."""
-        config = {"channels": ["pressure", "e_1"], "spectra": [], "config": ["diss_length"]}
+        config = {
+            "channels": ["pressure", "e_1"],
+            "spectra": [],
+            "config": ["diss_length"],
+        }
         qr = QReduce(str(qfile_v12), config)
         assert qr.filename == str(qfile_v12)
         assert qr.fileSizeOrig > 0
@@ -1160,7 +1164,9 @@ class TestMainCLI:
         """Non-existent datadir prints error and exits."""
         bad_dir = str(tmp_path / "nonexistent")
         output = str(tmp_path / "output.q")
-        result = self._run(["0", "-60", "99999", "--datadir", bad_dir, "-o", output, "--logfile", ""])
+        result = self._run(
+            ["0", "-60", "99999", "--datadir", bad_dir, "-o", output, "--logfile", ""]
+        )
         assert result.returncode == 1
         assert "does not exist" in result.stdout
 
@@ -1169,12 +1175,19 @@ class TestMainCLI:
         datadir = tmp_path / "data"
         datadir.mkdir()
         output = tmp_path / "output.q"
-        result = self._run([
-            "0", "-3600", "99999",
-            "--datadir", str(datadir),
-            "-o", str(output),
-            "--logfile", "",
-        ])
+        result = self._run(
+            [
+                "0",
+                "-3600",
+                "99999",
+                "--datadir",
+                str(datadir),
+                "-o",
+                str(output),
+                "--logfile",
+                "",
+            ]
+        )
         assert result.returncode == 0
         assert "0" in result.stdout
         assert output.exists()
@@ -1191,12 +1204,19 @@ class TestMainCLI:
         import time as time_module
 
         now = time_module.time()
-        result = self._run([
-            str(now - 120), "240", "99999",
-            "--datadir", str(datadir),
-            "-o", str(output),
-            "--logfile", "",
-        ])
+        result = self._run(
+            [
+                str(now - 120),
+                "240",
+                "99999",
+                "--datadir",
+                str(datadir),
+                "-o",
+                str(output),
+                "--logfile",
+                "",
+            ]
+        )
         assert result.returncode == 0
 
     def test_negative_maxsize(self):
@@ -1212,12 +1232,19 @@ class TestMainCLI:
     def test_negative_safety(self, tmp_path):
         """Negative safety value is rejected."""
         output = str(tmp_path / "output.q")
-        result = self._run([
-            "0", "-60", "99999",
-            "--safety", "-10",
-            "-o", output,
-            "--logfile", "",
-        ])
+        result = self._run(
+            [
+                "0",
+                "-60",
+                "99999",
+                "--safety",
+                "-10",
+                "-o",
+                output,
+                "--logfile",
+                "",
+            ]
+        )
         assert result.returncode != 0
 
     def test_verbose_flag(self, tmp_path):
@@ -1225,13 +1252,20 @@ class TestMainCLI:
         datadir = tmp_path / "data"
         datadir.mkdir()
         output = tmp_path / "output.q"
-        result = self._run([
-            "0", "-3600", "99999",
-            "--datadir", str(datadir),
-            "-o", str(output),
-            "--logfile", "",
-            "-v",
-        ])
+        result = self._run(
+            [
+                "0",
+                "-3600",
+                "99999",
+                "--datadir",
+                str(datadir),
+                "-o",
+                str(output),
+                "--logfile",
+                "",
+                "-v",
+            ]
+        )
         assert result.returncode == 0
 
     def test_config_empty_string(self, tmp_path):
@@ -1239,13 +1273,21 @@ class TestMainCLI:
         datadir = tmp_path / "data"
         datadir.mkdir()
         output = tmp_path / "output.q"
-        result = self._run([
-            "0", "-3600", "99999",
-            "--datadir", str(datadir),
-            "-o", str(output),
-            "--logfile", "",
-            "--config", "",
-        ])
+        result = self._run(
+            [
+                "0",
+                "-3600",
+                "99999",
+                "--datadir",
+                str(datadir),
+                "-o",
+                str(output),
+                "--logfile",
+                "",
+                "--config",
+                "",
+            ]
+        )
         assert result.returncode == 0
 
 
