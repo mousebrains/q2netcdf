@@ -11,6 +11,7 @@ from argparse import ArgumentParser
 import numpy as np
 import xarray as xr
 import logging
+import os
 import sys
 import struct
 from typing import Any
@@ -146,7 +147,8 @@ def loadQfile(fn: str) -> xr.Dataset | None:
         segments.append((hdr, seg_records))
 
     if not segments:
-        logging.warning(f"No header found in {fn}")
+        if os.path.getsize(fn) > 0:
+            logging.warning(f"No header found in {fn}")
         return None
 
     # Build one Dataset per segment using batch numpy construction
