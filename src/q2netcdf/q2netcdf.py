@@ -345,8 +345,7 @@ def _parse_segments(
         freqs: tuple[float, ...] | None = None
         if hdr.Ns > 0 and hdr.Nf > 0:
             sp_cols = [
-                records[f"sp{i}"].astype(np.float32)
-                for i in range(hdr.Ns * hdr.Nf)
+                records[f"sp{i}"].astype(np.float32) for i in range(hdr.Ns * hdr.Nf)
             ]
             sp_data = np.column_stack(sp_cols).reshape(n_recs, hdr.Ns, hdr.Nf)
             freqs = hdr.frequencies
@@ -439,9 +438,11 @@ def loadQfiles(filenames: list[str]) -> xr.Dataset | None:
             continue
 
         last_hdr: QHeader | None = None
-        for hdr, times, (ch_names, ch_data), (sp_names, sp_data, freqs), extras in (
-            segments
-        ):
+        for hdr, times, (ch_names, ch_data), (
+            sp_names,
+            sp_data,
+            freqs,
+        ), extras in segments:
             last_hdr = hdr
             all_times.append(times)
             seg_time_counts.append(len(times))
@@ -590,8 +591,7 @@ def loadQfiles(filenames: list[str]) -> xr.Dataset | None:
             data_vars[key] = ("ftime", vals)
         elif len(sample) == 3:  # Despiking
             rows = [
-                cfg[key] if key in cfg else np.full(3, np.nan)
-                for cfg in file_configs
+                cfg[key] if key in cfg else np.full(3, np.nan) for cfg in file_configs
             ]
             data_vars[key] = (("ftime", "despike"), np.stack(rows))
 
