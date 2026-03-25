@@ -546,19 +546,19 @@ def loadQfiles(filenames: list[str]) -> xr.Dataset | None:
                 freq_map[freqs] = [unified_freqs.index(f) for f in freqs]
 
         for var_name in sorted(all_sp_names):
-            arr = np.full((total_time, n_unified), np.nan, dtype=np.float32)
+            sp_arr = np.full((total_time, n_unified), np.nan, dtype=np.float32)
             offset = 0
             for (names, sp_data, freqs), count in zip(seg_spectra, seg_time_counts):
                 if var_name in names and freqs is not None:
                     assert sp_data is not None
                     col_indices = freq_map[freqs]
-                    arr[offset : offset + count][:, col_indices] = sp_data[
+                    sp_arr[offset : offset + count][:, col_indices] = sp_data[
                         :, names.index(var_name), :
                     ]
                 offset += count
             data_vars[var_name] = (
                 ("time", "freq"),
-                arr,
+                sp_arr,
                 spectra_attrs.get(var_name, {}),
             )
 
