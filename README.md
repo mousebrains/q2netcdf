@@ -208,8 +208,12 @@ Each release is archived on Zenodo and assigned a DOI. If you use this software 
 ```
 
 To cite the exact version you used, take that release's DOI from the
-[Zenodo record](https://doi.org/10.5281/zenodo.21910258) — for example v0.6.1 is
-[10.5281/zenodo.21910259](https://doi.org/10.5281/zenodo.21910259).
+[Zenodo record](https://doi.org/10.5281/zenodo.21910258) — for example v0.6.2 is
+[10.5281/zenodo.21910494](https://doi.org/10.5281/zenodo.21910494).
+
+> **Note**: v0.6.1 is archived but raises `OverflowError` on numpy 2.5 or later
+> for header timestamps outside the `datetime64[ns]` range. Cite v0.6.2 or the
+> concept DOI instead.
 
 GitHub's "Cite this repository" button and [`CITATION.cff`](CITATION.cff) will also generate BibTeX, APA, and RIS.
 
