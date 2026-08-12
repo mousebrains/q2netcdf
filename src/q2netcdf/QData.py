@@ -20,8 +20,8 @@ class QRecord:
     Attributes:
         number: Record sequence number (v1.2 only)
         error: Error code (v1.2 only)
-        t0: Start time as numpy datetime64[ns]
-        t1: End time as numpy datetime64[ns] (v1.2 only)
+        t0: Start time as numpy datetime64[ms]
+        t1: End time as numpy datetime64[ms] (v1.2 only)
         channels: Array of scalar channel values
         spectra: 2D array of spectra values [spectra_index, frequency]
     """
@@ -38,12 +38,12 @@ class QRecord:
         self.number = number
         self.error = err
         self.t0 = (hdr.time + np.array(stime * 1000).astype("timedelta64[ms]")).astype(
-            "datetime64[ns]"
+            "datetime64[ms]"
         )
         if etime is not None:
             self.t1 = (
                 hdr.time + np.array(etime * 1000).astype("timedelta64[ms]")
-            ).astype("datetime64[ns]")
+            ).astype("datetime64[ms]")
         else:
             self.t1 = None
 

@@ -327,7 +327,7 @@ def _parse_segments(
         # Compute timestamps in bulk
         stimes = records["stime"].astype(np.float64)
         times = hdr.time + (stimes * 1000).astype("timedelta64[ms]")
-        times = times.astype("datetime64[ns]")
+        times = times.astype("datetime64[ms]")
 
         # Extract channels
         ch_names: list[str | None] = []
@@ -358,7 +358,7 @@ def _parse_segments(
             etimes = records["etime"].astype(np.float64)
             extras["t1"] = (
                 hdr.time + (etimes * 1000).astype("timedelta64[ms]")
-            ).astype("datetime64[ns]")
+            ).astype("datetime64[ms]")
             extras["number"] = records["number"].copy()
             extras["error"] = records["error"].copy()
 
@@ -499,7 +499,7 @@ def loadQfiles(filenames: list[str]) -> xr.Dataset | None:
 
     # v1.2 extras with NaN/NaT fill for v1.3 segments
     if any(seg_has_extras):
-        t1_arr = np.full(total_time, np.datetime64("NaT"), dtype="datetime64[ns]")
+        t1_arr = np.full(total_time, np.datetime64("NaT"), dtype="datetime64[ms]")
         num_arr = np.full(total_time, np.nan, dtype=np.float64)
         err_arr = np.full(total_time, np.nan, dtype=np.float64)
         offset = 0

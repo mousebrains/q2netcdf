@@ -48,6 +48,37 @@ QHeader = "q2netcdf.QHeader:main"
 QFile = "q2netcdf.QFile:main"
 QReduce = "q2netcdf.QReduce:main"
 
+[tool.ruff.lint]
+# Rules are selected explicitly rather than inherited from ruff's implicit
+# defaults. Ruff 0.16.0 expanded those defaults, which turned a green CI red
+# with 218 findings across 26 rules without a single line of source changing
+# (0.15.0 reported 0 on the same tree). Pinning the ruff version alone would
+# only defer that, so the selection is stated here and the version is pinned
+# in .github/workflows/ci.yml and .pre-commit-config.yaml.
+#
+# These groups are clean as of ruff 0.16.2.
+select = [
+    "E4",   # pycodestyle: imports
+    "E7",   # pycodestyle: statements
+    "E9",   # pycodestyle: runtime/syntax errors
+    "F",    # pyflakes
+    "W",    # pycodestyle warnings
+    "PIE",  # flake8-pie: unnecessary constructs
+    "TID",  # flake8-tidy-imports
+]
+# Groups deliberately left off, with their current finding counts, so the cost
+# of opting in is known. Each needs a source cleanup first, not just a flag:
+#   N (240)    - flags the CamelCase module names (QFile, QHeader, ...), which
+#                are intentional and mirror the class each module defines
+#   S (743)    - flake8-bandit; bandit already runs separately via pre-commit
+#   PL (253)   - pylint conventions
+#   PTH (139)  - prefer pathlib over os.path
+#   LOG (68)   - root-logger calls; would require threading module loggers
+#   I (48)     - import sorting; auto-fixable but reorders every module
+#   UP (45)    - pyupgrade
+#   RUF (21), ARG (19), SIM (17), B (6), C4 (5), RET (5), EXE (3),
+#   BLE (2), PT (2), PYI (2), DTZ (1)
+
 [tool.pytest.ini_options]
 minversion = "7.0"
 addopts = [

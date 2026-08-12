@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Record timestamps no longer overflow under numpy 2.5**: record times are now
+  held as `datetime64[ms]` instead of `datetime64[ns]`. `QHeader` builds its
+  timestamp from a year-zero epoch, but the `datetime64[ns]` range is only
+  1677-09-21 to 2262-04-11, so any header timestamp outside that window
+  overflowed on conversion. numpy <= 2.4 wrapped silently and returned a wrong
+  time (year 0 became 1753-08-29T22:43:41); numpy 2.5 raises `OverflowError`,
+  which surfaced as 28 test failures. Milliseconds match the resolution the
+  Q-file actually stores, so the change is lossless, and the `datetime64[ms]`
+  range removes the overflow entirely -- a Q-file with a corrupt or zero header
+  timestamp now converts instead of aborting. NetCDF output is unchanged:
+  written time values are identical and xarray still reads them back as `ns`.
+  Note that `Dataset.time.dtype` from `loadQfile`/`loadQfiles` is now `ms`.
+
+### Changed
+- **Lint rules are now selected explicitly** in `pyproject.toml`, and the ruff
+  version is pinned in CI and pre-commit. Ruff 0.16.0 expanded its implicit
+  default rule set, reporting 218 findings across 26 rules on a tree that
+  ruff 0.15.0 reported 0 on, with no source change. The deferred rule groups
+  and their current counts are recorded in `pyproject.toml` so the cost of
+  opting into each is known.
+
 ## [0.6.1] - 2026-08-12
 
 ### Added

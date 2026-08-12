@@ -75,7 +75,9 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install ruff
+        # Pinned: ruff 0.16.0 expanded its implicit default rule set and broke
+        # CI with no source change. Rules are selected in pyproject.toml.
+        pip install ruff==0.16.2
 
     - name: Run ruff linter
       run: |
