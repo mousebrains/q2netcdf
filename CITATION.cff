@@ -18,15 +18,13 @@ identifiers:
   - type: doi
     value: 10.5281/zenodo.21910258
     description: >-
-      Concept DOI, always resolving to the most recent release. Cite this
-      unless you need to pin a specific version.
-  - type: doi
-    value: 10.5281/zenodo.21910259
-    description: Version DOI for release v0.6.1
+      Concept DOI, always resolving to the most recent release. Per-version
+      DOIs are listed on the Zenodo record; only the concept DOI is recorded
+      here so this file does not go stale with each release.
 repository-code: "https://github.com/mousebrains/q2netcdf"
 url: "https://github.com/mousebrains/q2netcdf"
 license: GPL-3.0-or-later
-version: 0.6.1
+version: 0.6.2
 date-released: "2026-08-12"
 keywords:
   - oceanography
