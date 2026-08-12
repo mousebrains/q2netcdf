@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-08-12
+
+### Added
+- `CITATION.cff` so GitHub and reference managers can generate a citation for the package
+- `.zenodo.json` supplying archive metadata (title, author with ORCID, affiliation, license, keywords) to the Zenodo GitHub integration
+
+### Notes
+- This release exists to trigger the first Zenodo archive and mint a DOI. No code changes.
+
 ## [0.4.3] - 2025-03-22
 
 ### Changed
