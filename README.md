@@ -4,6 +4,7 @@
 [![CI](https://github.com/mousebrains/q2netcdf/actions/workflows/ci.yml/badge.svg)](https://github.com/mousebrains/q2netcdf/actions/workflows/ci.yml)
 [![Coverage](https://codecov.io/gh/mousebrains/q2netcdf/branch/main/graph/badge.svg)](https://codecov.io/gh/mousebrains/q2netcdf)
 [![PyPI](https://img.shields.io/pypi/v/q2netcdf)](https://pypi.org/project/q2netcdf/)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21910258.svg)](https://doi.org/10.5281/zenodo.21910258)
 
 > **Note**: The package requires Python 3.10+, but the standalone `mergeqfiles` script is compatible with Python 3.7+ for deployment on legacy systems (e.g., MicroRider instruments).
 
@@ -187,6 +188,30 @@ To run a module directly: `python3 -m q2netcdf.QHeader --help`
 - [CONTRIBUTING.md](docs/CONTRIBUTING.md) - Contributor guidelines and development setup
 - [SECURITY.md](docs/SECURITY.md) - Security policy and vulnerability reporting
 - [QFILE_FORMAT.md](docs/QFILE_FORMAT.md) - Q-file binary format specification
+
+## Citation
+
+Each release is archived on Zenodo and assigned a DOI. If you use this software in published work, please cite it.
+
+**Concept DOI** (always resolves to the latest release — prefer this unless you need to pin a specific version):
+[10.5281/zenodo.21910258](https://doi.org/10.5281/zenodo.21910258)
+
+```bibtex
+@software{welch_q2netcdf,
+  author    = {Welch, T.P.},
+  title     = {q2netcdf: Python tools for Rockland Scientific Q-files},
+  publisher = {Zenodo},
+  year      = {2026},
+  doi       = {10.5281/zenodo.21910258},
+  url       = {https://doi.org/10.5281/zenodo.21910258},
+}
+```
+
+To cite the exact version you used, take that release's DOI from the
+[Zenodo record](https://doi.org/10.5281/zenodo.21910258) — for example v0.6.1 is
+[10.5281/zenodo.21910259](https://doi.org/10.5281/zenodo.21910259).
+
+GitHub's "Cite this repository" button and [`CITATION.cff`](CITATION.cff) will also generate BibTeX, APA, and RIS.
 
 ## License
 

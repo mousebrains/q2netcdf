@@ -14,6 +14,15 @@ authors:
     given-names: T.P.
     orcid: "https://orcid.org/0000-0002-3483-982X"
     affiliation: "Oregon State University"
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.21910258
+    description: >-
+      Concept DOI, always resolving to the most recent release. Cite this
+      unless you need to pin a specific version.
+  - type: doi
+    value: 10.5281/zenodo.21910259
+    description: Version DOI for release v0.6.1
 repository-code: "https://github.com/mousebrains/q2netcdf"
 url: "https://github.com/mousebrains/q2netcdf"
 license: GPL-3.0-or-later
