@@ -99,7 +99,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Suppressed the spurious "No header found" warning for zero-length input
   files; the warning now fires only when the file is non-empty
 
-## [0.4.3] - 2025-03-22
+## [0.4.3] - 2026-03-21
 
 ### Changed
 - **22x speedup for `loadQfile()`**: Replaced per-record `xr.Dataset` construction + `xr.concat` with batch numpy array stacking (`np.stack`) and single `xr.Dataset` build. The bottleneck was xarray Python overhead (96% of per-file time), not I/O (4%).
@@ -116,7 +116,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `QConfig.py`: invalid UTF-8 in v1.2 config parsing
 - Documented planned `mergeqfiles.py` performance optimizations in CLAUDE.md for future hardware testing
 
-## [0.4.2] - 2025-03-18
+## [0.4.2] - 2026-03-21
 
 ### Changed
 - Added `--version` flag to all 7 CLI entry points
@@ -137,7 +137,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Cancel in-progress CI runs on new pushes to same branch
 - Removed `.coverage` from repo, added to `.gitignore`
 
-## [0.4.1] - 2025-03-16
+## [0.4.1] - 2026-03-21
 
 ### Changed
 - Decomposed QHeader into smaller, testable methods
@@ -154,7 +154,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Multi-header file reads (files with multiple header/data segments)
 - Code quality improvements from Codex 5.2 review
 
-## [0.4.0] - 2024-11-05
+## [0.4.0] - 2025-11-05
 
 ### Changed
 - Removed CI testing for Python 3.7, 3.8, and 3.9 (mergeqfiles.py remains compatible with Python 3.7+, but these versions are no longer actively tested in CI)
@@ -194,7 +194,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Ruff formatting issue in mergeqfiles.py (inline comment spacing)
 - Typo in README.md: "restablished" → "reestablished"
 
-## [0.3.0] - 2025-03-15
+## [0.3.0] - 2025-10-02
 
 ### Added
 - Initial project structure with src/ layout
