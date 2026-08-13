@@ -40,6 +40,65 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Notes
 - This release exists to trigger the first Zenodo archive and mint a DOI. No code changes.
 
+## [0.6.0] - 2026-03-25
+
+### Added
+- **`loadQfiles()` bulk parser for batch conversion**: parses every record of a
+  file in a single numpy structured-dtype call and builds one `xr.Dataset` at
+  the end, removing the per-file xarray overhead and the per-record
+  `struct.unpack` calls. Handles mixed v1.2/v1.3 inputs, heterogeneous
+  channel/spectra/config keys, varying frequency dimensions, multi-segment
+  files, and empty files.
+
+  Benchmarks reported with the release (773 Q-files, 101K records; author's
+  measurement, single run, not independently reproduced):
+
+  |              | v0.5.1 | v0.6.0 | Speedup |
+  |--------------|--------|--------|---------|
+  | Load + merge | 3.5s   | 0.27s  | 13x     |
+  | Write        | 5.8s   | 1.6s   | 3.6x    |
+  | Total        | 9.3s   | 2.1s   | 4.4x    |
+
+- `loadQfile`, `loadQfiles`, and `mergeDatasets` are now exported from the
+  `q2netcdf` package root, so `from q2netcdf import loadQfiles` works
+
+### Changed
+- Default `--compressionLevel` lowered from 5 to 1. Produces a larger NetCDF
+  file in exchange for roughly twice the write speed.
+- Applied ruff formatting to `q2netcdf.py`
+
+### Fixed
+- `mergeDatasets()` no longer fails when the `freq` coordinate is absent from
+  some of the datasets being merged (`coords="minimal"` on the time concat)
+- mypy could not infer the spectra array shape under Python 3.10
+
+## [0.5.1] - 2026-03-22
+
+### Changed
+- Version bump only. The tag contains no source, test, or documentation
+  changes -- the sole diff against v0.5.0 is the version string in
+  `pyproject.toml`. (The v0.5.1 GitHub release notes restate the v0.5.0
+  changes; they do not describe anything introduced in this tag.)
+
+## [0.5.0] - 2026-03-22
+
+### Added
+- PyPI publishing on GitHub release via trusted publishing (OIDC)
+- TestPyPI publish workflow, triggered manually with `workflow_dispatch`
+- PyPI version badge, plus `Changelog` and `Issues` project URLs
+- Python API examples in the README (streaming records with `QFile`,
+  converting with `loadQfile`)
+
+### Changed
+- README states the GPL-3.0-or-later license explicitly
+- Updated GitHub Actions versions to clear the Node.js 20 deprecation warnings
+- Documented the planned `mergeqfiles.py` performance optimizations in
+  `CLAUDE.md` for implementation once hardware is available for testing
+
+### Fixed
+- Suppressed the spurious "No header found" warning for zero-length input
+  files; the warning now fires only when the file is non-empty
+
 ## [0.4.3] - 2025-03-22
 
 ### Changed
