@@ -5,6 +5,23 @@ All notable changes to the q2netcdf project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## A note on dates
+
+Entries are dated by **release** -- the date the version was tagged -- which is
+the Keep a Changelog convention and matches the timestamps PyPI and GitHub
+recorded for the published releases.
+
+That is not when the code was written. The package was started on 2024-11-04
+and was developed and used aboard the MicroRider through 2025-03-11; the
+repository then sits idle for seven months before the first version tag. So the
+0.3.0 entry below describes functionality built between November 2024 and March
+2025 that was packaged and tagged as a release on 2025-10-02, and none of the
+work from that first period carries a version number of its own.
+
+Dates for 0.3.0 through 0.4.3 were corrected in August 2026 after they were
+found to disagree with their tags; the originals were also internally
+inconsistent, dating 0.4.0 four months before 0.3.0.
+
 ## [Unreleased]
 
 ## [0.6.2] - 2026-08-12
